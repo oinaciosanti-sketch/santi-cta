@@ -1,0 +1,25 @@
+SANTI CTA V3 — ATUALIZAÇÃO DO SITE
+
+1. Faça backup do seu projeto atual e dos dados importantes.
+2. No GitHub, envie/atualize os arquivos da pasta santi-cta deste ZIP para a raiz do repositório (package.json deve estar na raiz). Faça commit na branch main.
+3. Vercel: aguarde o novo deploy. Mantenha as variáveis VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY já cadastradas.
+4. Supabase: execute SOMENTE o arquivo supabase/migration_v3_customers.sql no SQL Editor; NÃO execute o schema antigo novamente nem apague tabelas. Antes de rodar SQL, confirme que está no projeto correto.
+5. Teste a aba Clientes: cadastre uma pessoa, edite a ficha, clique numa OS existente, altere pagamento e status.
+6. Modo demonstração (sem Supabase configurado): Configurações > Carregar 24 chamados de teste. Os dados fictícios ficam no navegador atual e podem ser diferenciados pelo ID TESTE-26-xxx.
+
+O QUE MUDOU
+- Perfil individual de cliente, cadastro manual e histórico de atendimentos.
+- Alteração de pagamento para Em aberto ou Concluído na própria OS.
+- Botão de edição completa na própria OS.
+- Histórico automático com evento descritivo de mudança de etapa e pagamento.
+- Dashboard Relatórios com KPIs, funil por etapa, carga atribuída por técnico e volume por dia.
+- 24 atendimentos fictícios datados de 21, 22 e 23 de outubro de 2026, acessíveis no modo demonstração através de um botão.
+- Mantém logomarca oficial, layout móvel, Kanban de seis etapas + concluído, filtros da aba Veículos.
+
+LIMITES DESTA VERSÃO
+- WhatsApp abre mensagem manualmente; não há captação automática de contatos nem disparos automáticos.
+- Cadastros reais de WhatsApp para marketing exigem consentimento ou outra base legal apropriada e mecanismos de descadastro. Contato inicial não significa consentimento promocional.
+- Relatórios usam apenas valores das ordens, sem apurar lucro ou produtividade por hora.
+- Fotos ainda não são armazenadas em Supabase Storage nesta versão.
+- Não há acesso público para clientes nem níveis por cargo. Login interno do Supabase é necessário quando configurado.
+- Testes fictícios só devem ser usados no modo demonstração; não importar para a base real.

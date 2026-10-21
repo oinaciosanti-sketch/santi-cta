@@ -1,0 +1,626 @@
+export const testAppointments = [
+  {
+    "id": "TESTE-26-001",
+    "customer_name": "Paulo Gomes",
+    "phone": "559898800100",
+    "plate": "TST1000Z",
+    "vehicle": "Fiat Argo",
+    "year": "2017",
+    "service": "Revisão preventiva",
+    "description": "Dados fictícios de teste — atendimento 1.",
+    "stage": "Recebido",
+    "scheduled_date": "2026-10-21",
+    "scheduled_time": "08:00",
+    "mechanic": "Lucas",
+    "price": 185,
+    "paid": false,
+    "notes": "CENÁRIO DE TESTE — não corresponde a cliente real.",
+    "diagnosis": "",
+    "parts": "",
+    "photos": [],
+    "history": [
+      {
+        "at": "2026-10-21 08:00",
+        "text": "Chamado fictício cadastrado para simulação"
+      }
+    ]
+  },
+  {
+    "id": "TESTE-26-002",
+    "customer_name": "Camila Rocha",
+    "phone": "559898800101",
+    "plate": "TST1001Z",
+    "vehicle": "VW Polo",
+    "year": "2018",
+    "service": "Freios",
+    "description": "Dados fictícios de teste — atendimento 2.",
+    "stage": "Em análise",
+    "scheduled_date": "2026-10-21",
+    "scheduled_time": "09:30",
+    "mechanic": "Bruno",
+    "price": 232,
+    "paid": false,
+    "notes": "CENÁRIO DE TESTE — não corresponde a cliente real.",
+    "diagnosis": "Avaliação fictícia para validar o sistema.",
+    "parts": "",
+    "photos": [],
+    "history": [
+      {
+        "at": "2026-10-21 08:00",
+        "text": "Chamado fictício cadastrado para simulação"
+      }
+    ]
+  },
+  {
+    "id": "TESTE-26-003",
+    "customer_name": "Pedro Ferreira",
+    "phone": "559898800102",
+    "plate": "TST1002Z",
+    "vehicle": "Toyota Hilux",
+    "year": "2019",
+    "service": "Suspensão",
+    "description": "Dados fictícios de teste — atendimento 3.",
+    "stage": "Em manutenção",
+    "scheduled_date": "2026-10-21",
+    "scheduled_time": "10:00",
+    "mechanic": "Carlos",
+    "price": 279,
+    "paid": false,
+    "notes": "CENÁRIO DE TESTE — não corresponde a cliente real.",
+    "diagnosis": "Avaliação fictícia para validar o sistema.",
+    "parts": "Peças demonstrativas",
+    "photos": [],
+    "history": [
+      {
+        "at": "2026-10-21 08:00",
+        "text": "Chamado fictício cadastrado para simulação"
+      }
+    ]
+  },
+  {
+    "id": "TESTE-26-004",
+    "customer_name": "Luana Mendes",
+    "phone": "559898800103",
+    "plate": "TST1003Z",
+    "vehicle": "Honda CG 160",
+    "year": "2020",
+    "service": "Diagnóstico eletrônico",
+    "description": "Dados fictícios de teste — atendimento 4.",
+    "stage": "Higienização",
+    "scheduled_date": "2026-10-21",
+    "scheduled_time": "11:30",
+    "mechanic": "Rafael",
+    "price": 326,
+    "paid": false,
+    "notes": "CENÁRIO DE TESTE — não corresponde a cliente real.",
+    "diagnosis": "Avaliação fictícia para validar o sistema.",
+    "parts": "Peças demonstrativas",
+    "photos": [],
+    "history": [
+      {
+        "at": "2026-10-21 08:00",
+        "text": "Chamado fictício cadastrado para simulação"
+      }
+    ]
+  },
+  {
+    "id": "TESTE-26-005",
+    "customer_name": "Henrique Sousa",
+    "phone": "559898800104",
+    "plate": "TST1004Z",
+    "vehicle": "Chevrolet Onix",
+    "year": "2021",
+    "service": "Troca de óleo",
+    "description": "Dados fictícios de teste — atendimento 5.",
+    "stage": "Pronto para entrega",
+    "scheduled_date": "2026-10-21",
+    "scheduled_time": "12:00",
+    "mechanic": "Lucas",
+    "price": 373,
+    "paid": false,
+    "notes": "CENÁRIO DE TESTE — não corresponde a cliente real.",
+    "diagnosis": "Avaliação fictícia para validar o sistema.",
+    "parts": "Peças demonstrativas",
+    "photos": [],
+    "history": [
+      {
+        "at": "2026-10-21 08:00",
+        "text": "Chamado fictício cadastrado para simulação"
+      }
+    ]
+  },
+  {
+    "id": "TESTE-26-006",
+    "customer_name": "Ana Carvalho",
+    "phone": "559898800105",
+    "plate": "TST1005Z",
+    "vehicle": "Fiat Toro",
+    "year": "2022",
+    "service": "Ar-condicionado",
+    "description": "Dados fictícios de teste — atendimento 6.",
+    "stage": "Concluído",
+    "scheduled_date": "2026-10-21",
+    "scheduled_time": "13:30",
+    "mechanic": "Bruno",
+    "price": 420,
+    "paid": true,
+    "notes": "CENÁRIO DE TESTE — não corresponde a cliente real.",
+    "diagnosis": "Avaliação fictícia para validar o sistema.",
+    "parts": "Peças demonstrativas",
+    "photos": [],
+    "history": [
+      {
+        "at": "2026-10-21 08:00",
+        "text": "Chamado fictício cadastrado para simulação"
+      }
+    ]
+  },
+  {
+    "id": "TESTE-26-007",
+    "customer_name": "Daniel Silva",
+    "phone": "559898800106",
+    "plate": "TST1006Z",
+    "vehicle": "Hyundai HB20",
+    "year": "2023",
+    "service": "Elétrica",
+    "description": "Dados fictícios de teste — atendimento 7.",
+    "stage": "Em manutenção",
+    "scheduled_date": "2026-10-21",
+    "scheduled_time": "14:00",
+    "mechanic": "Carlos",
+    "price": 467,
+    "paid": false,
+    "notes": "CENÁRIO DE TESTE — não corresponde a cliente real.",
+    "diagnosis": "Avaliação fictícia para validar o sistema.",
+    "parts": "Peças demonstrativas",
+    "photos": [],
+    "history": [
+      {
+        "at": "2026-10-21 08:00",
+        "text": "Chamado fictício cadastrado para simulação"
+      }
+    ]
+  },
+  {
+    "id": "TESTE-26-008",
+    "customer_name": "Renata Campos",
+    "phone": "559898800107",
+    "plate": "TST1007Z",
+    "vehicle": "Toyota Corolla",
+    "year": "2024",
+    "service": "Motor",
+    "description": "Dados fictícios de teste — atendimento 8.",
+    "stage": "Concluído",
+    "scheduled_date": "2026-10-21",
+    "scheduled_time": "15:30",
+    "mechanic": "Rafael",
+    "price": 514,
+    "paid": true,
+    "notes": "CENÁRIO DE TESTE — não corresponde a cliente real.",
+    "diagnosis": "Avaliação fictícia para validar o sistema.",
+    "parts": "Peças demonstrativas",
+    "photos": [],
+    "history": [
+      {
+        "at": "2026-10-21 08:00",
+        "text": "Chamado fictício cadastrado para simulação"
+      }
+    ]
+  },
+  {
+    "id": "TESTE-26-009",
+    "customer_name": "Gabriel Matos",
+    "phone": "559898800108",
+    "plate": "TST1008Z",
+    "vehicle": "Honda Civic",
+    "year": "2025",
+    "service": "Revisão preventiva",
+    "description": "Dados fictícios de teste — atendimento 9.",
+    "stage": "Agendado",
+    "scheduled_date": "2026-10-22",
+    "scheduled_time": "08:00",
+    "mechanic": "",
+    "price": 561,
+    "paid": false,
+    "notes": "CENÁRIO DE TESTE — não corresponde a cliente real.",
+    "diagnosis": "",
+    "parts": "",
+    "photos": [],
+    "history": [
+      {
+        "at": "2026-10-22 08:00",
+        "text": "Chamado fictício cadastrado para simulação"
+      }
+    ]
+  },
+  {
+    "id": "TESTE-26-010",
+    "customer_name": "Beatriz Lima",
+    "phone": "559898800109",
+    "plate": "TST1009Z",
+    "vehicle": "Jeep Renegade",
+    "year": "2017",
+    "service": "Freios",
+    "description": "Dados fictícios de teste — atendimento 10.",
+    "stage": "Recebido",
+    "scheduled_date": "2026-10-22",
+    "scheduled_time": "09:30",
+    "mechanic": "Bruno",
+    "price": 608,
+    "paid": false,
+    "notes": "CENÁRIO DE TESTE — não corresponde a cliente real.",
+    "diagnosis": "",
+    "parts": "",
+    "photos": [],
+    "history": [
+      {
+        "at": "2026-10-22 08:00",
+        "text": "Chamado fictício cadastrado para simulação"
+      }
+    ]
+  },
+  {
+    "id": "TESTE-26-011",
+    "customer_name": "Rodrigo Alves",
+    "phone": "559898800110",
+    "plate": "TST1010Z",
+    "vehicle": "Chevrolet S10",
+    "year": "2018",
+    "service": "Suspensão",
+    "description": "Dados fictícios de teste — atendimento 11.",
+    "stage": "Em análise",
+    "scheduled_date": "2026-10-22",
+    "scheduled_time": "10:00",
+    "mechanic": "Carlos",
+    "price": 655,
+    "paid": false,
+    "notes": "CENÁRIO DE TESTE — não corresponde a cliente real.",
+    "diagnosis": "Avaliação fictícia para validar o sistema.",
+    "parts": "",
+    "photos": [],
+    "history": [
+      {
+        "at": "2026-10-22 08:00",
+        "text": "Chamado fictício cadastrado para simulação"
+      }
+    ]
+  },
+  {
+    "id": "TESTE-26-012",
+    "customer_name": "Juliana Reis",
+    "phone": "559898800111",
+    "plate": "TST1011Z",
+    "vehicle": "Yamaha Fazer 250",
+    "year": "2019",
+    "service": "Diagnóstico eletrônico",
+    "description": "Dados fictícios de teste — atendimento 12.",
+    "stage": "Agendado",
+    "scheduled_date": "2026-10-22",
+    "scheduled_time": "11:30",
+    "mechanic": "",
+    "price": 702,
+    "paid": false,
+    "notes": "CENÁRIO DE TESTE — não corresponde a cliente real.",
+    "diagnosis": "",
+    "parts": "",
+    "photos": [],
+    "history": [
+      {
+        "at": "2026-10-22 08:00",
+        "text": "Chamado fictício cadastrado para simulação"
+      }
+    ]
+  },
+  {
+    "id": "TESTE-26-013",
+    "customer_name": "César Carvalho",
+    "phone": "559898800112",
+    "plate": "TST1012Z",
+    "vehicle": "VW Saveiro",
+    "year": "2020",
+    "service": "Troca de óleo",
+    "description": "Dados fictícios de teste — atendimento 13.",
+    "stage": "Em manutenção",
+    "scheduled_date": "2026-10-22",
+    "scheduled_time": "12:00",
+    "mechanic": "Lucas",
+    "price": 749,
+    "paid": false,
+    "notes": "CENÁRIO DE TESTE — não corresponde a cliente real.",
+    "diagnosis": "Avaliação fictícia para validar o sistema.",
+    "parts": "Peças demonstrativas",
+    "photos": [],
+    "history": [
+      {
+        "at": "2026-10-22 08:00",
+        "text": "Chamado fictício cadastrado para simulação"
+      }
+    ]
+  },
+  {
+    "id": "TESTE-26-014",
+    "customer_name": "Mônica Nunes",
+    "phone": "559898800113",
+    "plate": "TST1013Z",
+    "vehicle": "Renault Duster",
+    "year": "2021",
+    "service": "Ar-condicionado",
+    "description": "Dados fictícios de teste — atendimento 14.",
+    "stage": "Agendado",
+    "scheduled_date": "2026-10-22",
+    "scheduled_time": "13:30",
+    "mechanic": "",
+    "price": 796,
+    "paid": false,
+    "notes": "CENÁRIO DE TESTE — não corresponde a cliente real.",
+    "diagnosis": "",
+    "parts": "",
+    "photos": [],
+    "history": [
+      {
+        "at": "2026-10-22 08:00",
+        "text": "Chamado fictício cadastrado para simulação"
+      }
+    ]
+  },
+  {
+    "id": "TESTE-26-015",
+    "customer_name": "Igor Fonseca",
+    "phone": "559898800114",
+    "plate": "TST1014Z",
+    "vehicle": "Nissan Kicks",
+    "year": "2022",
+    "service": "Elétrica",
+    "description": "Dados fictícios de teste — atendimento 15.",
+    "stage": "Recebido",
+    "scheduled_date": "2026-10-22",
+    "scheduled_time": "14:00",
+    "mechanic": "Carlos",
+    "price": 843,
+    "paid": false,
+    "notes": "CENÁRIO DE TESTE — não corresponde a cliente real.",
+    "diagnosis": "",
+    "parts": "",
+    "photos": [],
+    "history": [
+      {
+        "at": "2026-10-22 08:00",
+        "text": "Chamado fictício cadastrado para simulação"
+      }
+    ]
+  },
+  {
+    "id": "TESTE-26-016",
+    "customer_name": "Marina Costa",
+    "phone": "559898800115",
+    "plate": "TST1015Z",
+    "vehicle": "Ford Ranger",
+    "year": "2023",
+    "service": "Motor",
+    "description": "Dados fictícios de teste — atendimento 16.",
+    "stage": "Agendado",
+    "scheduled_date": "2026-10-22",
+    "scheduled_time": "15:30",
+    "mechanic": "",
+    "price": 890,
+    "paid": false,
+    "notes": "CENÁRIO DE TESTE — não corresponde a cliente real.",
+    "diagnosis": "",
+    "parts": "",
+    "photos": [],
+    "history": [
+      {
+        "at": "2026-10-22 08:00",
+        "text": "Chamado fictício cadastrado para simulação"
+      }
+    ]
+  },
+  {
+    "id": "TESTE-26-017",
+    "customer_name": "Felipe Borges",
+    "phone": "559898800116",
+    "plate": "TST1016Z",
+    "vehicle": "VW Gol",
+    "year": "2024",
+    "service": "Revisão preventiva",
+    "description": "Dados fictícios de teste — atendimento 17.",
+    "stage": "Agendado",
+    "scheduled_date": "2026-10-23",
+    "scheduled_time": "08:00",
+    "mechanic": "",
+    "price": 937,
+    "paid": false,
+    "notes": "CENÁRIO DE TESTE — não corresponde a cliente real.",
+    "diagnosis": "",
+    "parts": "",
+    "photos": [],
+    "history": [
+      {
+        "at": "2026-10-23 08:00",
+        "text": "Chamado fictício cadastrado para simulação"
+      }
+    ]
+  },
+  {
+    "id": "TESTE-26-018",
+    "customer_name": "Letícia Moreira",
+    "phone": "559898800117",
+    "plate": "TST1017Z",
+    "vehicle": "Fiat Strada",
+    "year": "2025",
+    "service": "Freios",
+    "description": "Dados fictícios de teste — atendimento 18.",
+    "stage": "Agendado",
+    "scheduled_date": "2026-10-23",
+    "scheduled_time": "09:30",
+    "mechanic": "",
+    "price": 984,
+    "paid": false,
+    "notes": "CENÁRIO DE TESTE — não corresponde a cliente real.",
+    "diagnosis": "",
+    "parts": "",
+    "photos": [],
+    "history": [
+      {
+        "at": "2026-10-23 08:00",
+        "text": "Chamado fictício cadastrado para simulação"
+      }
+    ]
+  },
+  {
+    "id": "TESTE-26-019",
+    "customer_name": "Ronaldo Barros",
+    "phone": "559898800118",
+    "plate": "TST1018Z",
+    "vehicle": "Honda Biz",
+    "year": "2017",
+    "service": "Suspensão",
+    "description": "Dados fictícios de teste — atendimento 19.",
+    "stage": "Agendado",
+    "scheduled_date": "2026-10-23",
+    "scheduled_time": "10:00",
+    "mechanic": "",
+    "price": 1031,
+    "paid": false,
+    "notes": "CENÁRIO DE TESTE — não corresponde a cliente real.",
+    "diagnosis": "",
+    "parts": "",
+    "photos": [],
+    "history": [
+      {
+        "at": "2026-10-23 08:00",
+        "text": "Chamado fictício cadastrado para simulação"
+      }
+    ]
+  },
+  {
+    "id": "TESTE-26-020",
+    "customer_name": "Bárbara Ribeiro",
+    "phone": "559898800119",
+    "plate": "TST1019Z",
+    "vehicle": "Toyota SW4",
+    "year": "2018",
+    "service": "Diagnóstico eletrônico",
+    "description": "Dados fictícios de teste — atendimento 20.",
+    "stage": "Agendado",
+    "scheduled_date": "2026-10-23",
+    "scheduled_time": "11:30",
+    "mechanic": "",
+    "price": 1078,
+    "paid": false,
+    "notes": "CENÁRIO DE TESTE — não corresponde a cliente real.",
+    "diagnosis": "",
+    "parts": "",
+    "photos": [],
+    "history": [
+      {
+        "at": "2026-10-23 08:00",
+        "text": "Chamado fictício cadastrado para simulação"
+      }
+    ]
+  },
+  {
+    "id": "TESTE-26-021",
+    "customer_name": "Tiago Santana",
+    "phone": "559898800120",
+    "plate": "TST1020Z",
+    "vehicle": "Hyundai Creta",
+    "year": "2019",
+    "service": "Troca de óleo",
+    "description": "Dados fictícios de teste — atendimento 21.",
+    "stage": "Agendado",
+    "scheduled_date": "2026-10-23",
+    "scheduled_time": "12:00",
+    "mechanic": "",
+    "price": 1125,
+    "paid": false,
+    "notes": "CENÁRIO DE TESTE — não corresponde a cliente real.",
+    "diagnosis": "",
+    "parts": "",
+    "photos": [],
+    "history": [
+      {
+        "at": "2026-10-23 08:00",
+        "text": "Chamado fictício cadastrado para simulação"
+      }
+    ]
+  },
+  {
+    "id": "TESTE-26-022",
+    "customer_name": "Carolina Nascimento",
+    "phone": "559898800121",
+    "plate": "TST1021Z",
+    "vehicle": "Chevrolet Tracker",
+    "year": "2020",
+    "service": "Ar-condicionado",
+    "description": "Dados fictícios de teste — atendimento 22.",
+    "stage": "Agendado",
+    "scheduled_date": "2026-10-23",
+    "scheduled_time": "13:30",
+    "mechanic": "",
+    "price": 1172,
+    "paid": false,
+    "notes": "CENÁRIO DE TESTE — não corresponde a cliente real.",
+    "diagnosis": "",
+    "parts": "",
+    "photos": [],
+    "history": [
+      {
+        "at": "2026-10-23 08:00",
+        "text": "Chamado fictício cadastrado para simulação"
+      }
+    ]
+  },
+  {
+    "id": "TESTE-26-023",
+    "customer_name": "Vítor Martins",
+    "phone": "559898800122",
+    "plate": "TST1022Z",
+    "vehicle": "Fiat Mobi",
+    "year": "2021",
+    "service": "Elétrica",
+    "description": "Dados fictícios de teste — atendimento 23.",
+    "stage": "Agendado",
+    "scheduled_date": "2026-10-23",
+    "scheduled_time": "14:00",
+    "mechanic": "",
+    "price": 1219,
+    "paid": false,
+    "notes": "CENÁRIO DE TESTE — não corresponde a cliente real.",
+    "diagnosis": "",
+    "parts": "",
+    "photos": [],
+    "history": [
+      {
+        "at": "2026-10-23 08:00",
+        "text": "Chamado fictício cadastrado para simulação"
+      }
+    ]
+  },
+  {
+    "id": "TESTE-26-024",
+    "customer_name": "Raquel Oliveira",
+    "phone": "559898800123",
+    "plate": "TST1023Z",
+    "vehicle": "VW T-Cross",
+    "year": "2022",
+    "service": "Motor",
+    "description": "Dados fictícios de teste — atendimento 24.",
+    "stage": "Agendado",
+    "scheduled_date": "2026-10-23",
+    "scheduled_time": "15:30",
+    "mechanic": "",
+    "price": 1266,
+    "paid": false,
+    "notes": "CENÁRIO DE TESTE — não corresponde a cliente real.",
+    "diagnosis": "",
+    "parts": "",
+    "photos": [],
+    "history": [
+      {
+        "at": "2026-10-23 08:00",
+        "text": "Chamado fictício cadastrado para simulação"
+      }
+    ]
+  }
+];

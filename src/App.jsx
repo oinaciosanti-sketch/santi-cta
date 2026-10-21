@@ -30,6 +30,9 @@ import {
   LogOut,
   LockKeyhole,
   Filter,
+  UserPlus,
+  CreditCard,
+  BarChart3,
 } from 'lucide-react';
 import {
   STAGES,
@@ -40,6 +43,7 @@ import {
   formatMoney,
   waLink,
 } from './data';
+import {testAppointments} from './fixtures';
 import {
   configured,
   supabase,
@@ -47,6 +51,8 @@ import {
   saveOrder,
   removeOrder,
   demoWrite,
+  getCustomers,
+  saveCustomer,
 } from './db';
 
 const IconMap = {
@@ -165,6 +171,10 @@ function initials(n) {
 function App() {
   const [page, setPage] = useState('Dashboard');
   const [orders, setOrders] = useState([]);
+  const [clients, setClients] = useState([]);
+  const [clientSelected, setClientSelected] = useState(null);
+  const [clientEditing, setClientEditing] = useState(null);
+  const [reportWindow, setReportWindow] = useState('tres-dias');
   const [query, setQuery] = useState('');
   const [date, setDate] = useState(nowLocal());
   const [selected, setSelected] = useState(null);
@@ -201,6 +211,7 @@ function App() {
     setBusy(true);
     try {
       setOrders(await getOrders());
+      setClients(await getCustomers());
     } catch (e) {
       toast(`Erro ao carregar: ${e.message}`);
     } finally {
@@ -216,6 +227,32 @@ function App() {
   const persist = async (next) => {
     setOrders(next);
     if (!configured) demoWrite(next);
+  };
+
+  const syncCustomer = async (o) => {
+    const key = String(o.phone || '').replace(/\D/g, '');
+    if (!key) return;
+    const existing = clients.find((x) => x.phone.replace(/\D/g, '') === key);
+    try {
+      const c = { id: existing?.id || `C-${key}`, name: o.customer_name, phone: key,
+        email: existing?.email || '', notes: existing?.notes || '',
+        marketing_opt_in: existing?.marketing_opt_in || false };
+      await saveCustomer(c);
+      setClients((prev) => [c, ...prev.filter((x) => x.id !== c.id)]);
+    } catch (e) {
+      toast('OS salva. Cadastro do cliente pendente: ' + e.message);
+    }
+  };
+
+  const saveClient = async (c) => {
+    const payload = { id: c.id || `C-${Date.now()}`, name: c.name, phone: String(c.phone || '').replace(/\D/g, ''), email: c.email || '', notes: c.notes || '', marketing_opt_in: !!c.marketing_opt_in };
+    try {
+      await saveCustomer(payload);
+      setClients((prev) => [payload, ...prev.filter((x) => x.id !== payload.id)]);
+      setClientEditing(null);
+      setClientSelected(payload);
+      toast('Cliente salvo no cadastro.');
+    } catch (e) { toast('Erro ao salvar cliente: ' + e.message); }
   };
 
   const save = async (data) => {
@@ -247,6 +284,7 @@ function App() {
       );
       setEditing(null);
       if (selected?.id === payload.id) setSelected(payload);
+      await syncCustomer(payload);
       toast('Ordem de serviço salva com sucesso.');
     } catch (e) {
       toast(`Não foi possível salvar: ${e.message}`);
@@ -261,9 +299,11 @@ function App() {
         ...(o.history || []),
         {
           at: datetime(),
-          text: changes.stage
+          text: changes.stage && changes.stage !== o.stage
             ? `Etapa: ${o.stage} → ${changes.stage}`
-            : 'Registro atualizado',
+            : typeof changes.paid === 'boolean' && changes.paid !== o.paid
+              ? `Pagamento ${changes.paid ? 'concluído' : 'marcado como em aberto'}`
+              : 'Dados da OS atualizados',
         },
       ],
     };
@@ -347,29 +387,40 @@ function App() {
   }, [filtered, vehicleFilter]);
 
   const customerCards = useMemo(() => {
-    return Object.values(
-      filtered.reduce((acc, o) => {
-        const key = `${o.customer_name}-${o.phone}`;
-        if (!acc[key]) {
-          acc[key] = {
-            key,
-            customer_name: o.customer_name,
-            phone: o.phone,
-            visits: 0,
-            vehicles: new Set(),
-            last: o,
-          };
-        }
-        acc[key].visits += 1;
-        acc[key].vehicles.add(o.plate);
-        const curr = acc[key].last;
-        const currStamp = `${curr.scheduled_date || ''} ${curr.scheduled_time || ''}`;
-        const nextStamp = `${o.scheduled_date || ''} ${o.scheduled_time || ''}`;
-        if (nextStamp >= currStamp) acc[key].last = o;
-        return acc;
-      }, {}),
-    );
-  }, [filtered]);
+    const map = new Map();
+    clients.forEach((c) => map.set(String(c.phone).replace(/\D/g, ''), {
+      ...c, customer_name: c.name, visits: 0, vehicles: new Set(), related: [],
+    }));
+    orders.forEach((o) => {
+      const phone = String(o.phone).replace(/\D/g, '');
+      if (!map.has(phone)) map.set(phone, { id: `C-${phone}`, name: o.customer_name,
+        customer_name: o.customer_name, phone, email: '', notes: '',
+        marketing_opt_in: false, visits: 0, vehicles: new Set(), related: [] });
+      const c = map.get(phone);
+      c.visits++;
+      c.vehicles.add(o.plate);
+      c.related.push(o);
+    });
+    return [...map.values()].filter(c => [c.name,c.phone,c.email].join(' ').toLowerCase().includes(query.toLowerCase()));
+  }, [clients, orders, query]);
+
+  const reportOrders = useMemo(() => orders.filter(o => {
+    if (reportWindow === 'todos') return true;
+    if (reportWindow === 'mes') return isSameMonth(o.scheduled_date);
+    return ['2026-10-21','2026-10-22','2026-10-23'].includes(o.scheduled_date);
+  }), [orders, reportWindow]);
+  const reportStats = useMemo(() => {
+    const n = reportOrders.length;
+    const completed = reportOrders.filter(o => o.stage === 'Concluído').length;
+    const billed = reportOrders.reduce((sum,o) => sum + Number(o.price||0),0);
+    const received = reportOrders.filter(o => o.paid).reduce((sum,o) => sum + Number(o.price||0),0);
+    const activeJobs = reportOrders.filter(o => !['Agendado','Concluído'].includes(o.stage)).length;
+    const techs = Object.entries(reportOrders.reduce((acc,o) => {
+      const k = o.mechanic?.trim() || 'Não atribuído';
+      acc[k] = (acc[k] || 0) + 1; return acc;
+    }, {})).sort((a,b)=>b[1]-a[1]);
+    return {n,completed,billed,received,activeJobs,techs,avg:n?billed/n:0};
+  }, [reportOrders]);
 
   const signin = async (e) => {
     e.preventDefault();
@@ -815,22 +866,19 @@ function App() {
 
               {page === 'Clientes' && (
                 <div className="panel">
-                  <PanelHead title="Base de clientes" subtitle={`${customerCards.length} cliente(s) mapeados`} />
+                  <PanelHead title="Cadastro e relacionamento" subtitle={`${customerCards.length} cliente(s) · registros independentes das ordens de serviço`}
+                    action={<button className="btn primary" onClick={() => setClientEditing({name:'',phone:'',email:'',notes:'',marketing_opt_in:false})}><UserPlus size={16}/> Novo cliente</button>} />
                   <div className="vehicle-grid">
-                    {customerCards.map((c) => (
-                      <button className="vehicle-card" key={c.key} onClick={() => setSelected(c.last)}>
-                        <div className="vehicle-symbol">
-                          <Users size={24} />
-                        </div>
-                        <strong>{c.customer_name}</strong>
-                        <span className="plate">{c.phone}</span>
-                        <small>{c.vehicles.size} veículo(s) vinculado(s)</small>
-                        <div>
-                          {c.visits} atendimento(s) <ChevronRight size={15} />
-                        </div>
+                    {customerCards.map(c => (
+                      <button className="vehicle-card" key={c.id} onClick={()=>setClientSelected(c)}>
+                        <div className="vehicle-symbol"><Users size={24}/></div>
+                        <strong>{c.name}</strong><span className="plate">{c.phone}</span>
+                        <small>{c.vehicles.size} veículo(s) · {c.visits} atendimento(s)</small>
+                        <div><span>Ver ficha e histórico</span><ChevronRight size={15}/></div>
                       </button>
                     ))}
                   </div>
+                  {customerCards.length===0 && <Empty text="Nenhum cliente cadastrado."/>}
                 </div>
               )}
 
@@ -875,24 +923,34 @@ function App() {
               )}
 
               {page === 'Relatórios' && (
-                <div className="panel">
-                  <PanelHead title="Indicadores operacionais" subtitle="Leitura rápida do momento da oficina" />
-                  <div className="report-bars">
-                    {STAGES.map((stage) => (
-                      <div className="report-bar" key={stage}>
-                        <span>{stage}</span>
-                        <div>
-                          <i
-                            style={{
-                              width: `${Math.max((counts[stage] / Math.max(orders.length, 1)) * 100, counts[stage] ? 6 : 0)}%`,
-                              background: COLORS[stage],
-                            }}
-                          />
-                        </div>
-                        <b>{counts[stage]}</b>
-                      </div>
-                    ))}
+                <div className="reports-v3">
+                  <div className="panel"><PanelHead title="Central de indicadores" subtitle="Produtividade, receita cadastrada e fluxo de veículos"
+                    action={<select className="status-select" style={{width:'auto'}} value={reportWindow} onChange={e=>setReportWindow(e.target.value)}>
+                      <option value="tres-dias">21 a 23/10/2026</option><option value="mes">Mês atual</option><option value="todos">Todo o histórico</option>
+                    </select>}/></div>
+                  <div className="report-kpis">
+                    <Metric label="Atendimentos" value={reportStats.n} helper="Ordens no período"/>
+                    <Metric label="Em andamento" value={reportStats.activeJobs} helper="Veículos em processo"/>
+                    <Metric label="Concluídos" value={reportStats.completed} helper={reportStats.n?`${Math.round(reportStats.completed/reportStats.n*100)}% dos chamados`: 'Sem chamados'}/>
+                    <Metric label="Valor cadastrado" value={formatMoney(reportStats.billed)} helper="Não representa lucro"/>
+                    <Metric label="Recebido (marcado)" value={formatMoney(reportStats.received)} helper="Conforme status de pagamento"/>
+                    <Metric label="Ticket médio" value={formatMoney(reportStats.avg)} helper="Valor das OS / quantidade"/>
                   </div>
+                  <div className="report-panes">
+                    <section className="panel"><PanelHead title="Funil operacional" subtitle="Distribuição por etapa"/>
+                      <div className="report-bars">{STAGES.map(stage=>{
+                        const count=reportOrders.filter(o=>o.stage===stage).length;
+                        return <div className="report-bar" key={stage}><span>{stage}</span><div><i style={{width:`${reportStats.n?count/reportStats.n*100:0}%`,background:COLORS[stage]}}/></div><b>{count}</b></div>
+                      })}</div></section>
+                    <section className="panel"><PanelHead title="Carga por técnico" subtitle="OS atribuídas no período (não representa horas trabalhadas)"/>
+                      <div className="report-bars">{reportStats.techs.map(([tech,n])=><div className="report-bar" key={tech}><span>{tech}</span><div><i style={{width:`${reportStats.n?n/reportStats.n*100:0}%`,background:'#ec5357'}}/></div><b>{n}</b></div>)}</div></section>
+                  </div>
+                  <div className="panel"><PanelHead title="Agenda por dia" subtitle="Quantidade de serviços agendados e recebidos por data"/>
+                    <div className="daily-report">{[...new Set(reportOrders.map(o=>o.scheduled_date))].sort().map(day=>{
+                      const list=reportOrders.filter(o=>o.scheduled_date===day);
+                      return <div className="day-tile" key={day}><span>{friendlyDate(day)}</span><strong>{list.length}</strong><small>{list.filter(o=>o.stage!=='Agendado').length} já recebidos ou avançados</small></div>
+                    })}</div></div>
+                  <div className="report-footnote">Indicadores calculados com os dados registrados no SANTI CTA. Ainda não medem lucro real, horas produtivas ou cumprimento de prazo; exigirão custos, apontamento de tempo e datas de conclusão.</div>
                 </div>
               )}
 
@@ -908,6 +966,12 @@ function App() {
                     <button className="btn ghost" onClick={refresh}>
                       <RefreshCcw size={16} /> Atualizar dados
                     </button>
+                    {!configured && <button className="btn primary" onClick={async()=>{
+                      const ids=new Set(orders.map(x=>x.id));
+                      const next=[...orders,...testAppointments.filter(x=>!ids.has(x.id))];
+                      await persist(next);
+                      toast('24 chamados fictícios adicionados para 21, 22 e 23/10/2026.');
+                    }}>Carregar 24 chamados de teste</button>}
                   </div>
                   <div className="panel settings-card">
                     <h3>Observação da versão</h3>
@@ -928,7 +992,7 @@ function App() {
       </div>
 
       {editing && <EditModal order={editing} onClose={() => setEditing(null)} onSave={save} />}
-      {selected && (
+      {selected && !editing && (
         <Detail
           order={selected}
           all={orders}
@@ -941,9 +1005,42 @@ function App() {
           onNotice={toast}
         />
       )}
+      {clientSelected && !clientEditing && <CustomerDetail c={customerCards.find(c=>c.id===clientSelected.id)||clientSelected}
+        onClose={()=>setClientSelected(null)} onEdit={()=>setClientEditing(clientSelected)} openOS={o=>{setClientSelected(null);setSelected(o)}}/>}
+      {clientEditing && <CustomerEdit value={clientEditing} onClose={()=>setClientEditing(null)} onSave={saveClient}/>}
       {notice && <div className="toast">{notice}</div>}
     </div>
   );
+}
+
+function Metric({label,value,helper}) { return <div className="report-metric"><span>{label}</span><strong>{value}</strong><small>{helper}</small></div> }
+
+function CustomerEdit({value,onClose,onSave}) {
+  const [c,setC]=useState(value);
+  const [saving,setSaving]=useState(false);
+  const update=(key,v)=>setC(p=>({...p,[key]:v}));
+  return <div className="overlay" onMouseDown={e=>e.target===e.currentTarget&&onClose()}><div className="modal edit-modal">
+    <div className="modal-head"><div><span className="eyebrow">SANTI CARE</span><h2>{c.id?'Editar cliente':'Novo cliente'}</h2></div><button className="icon-btn" onClick={onClose}><X/></button></div>
+    <form onSubmit={async e=>{e.preventDefault();setSaving(true);await onSave(c);setSaving(false)}}>
+    <div className="form-body"><div className="form-grid"><Field label="Nome *"><input required value={c.name} onChange={e=>update('name',e.target.value)}/></Field>
+    <Field label="WhatsApp *"><input required value={c.phone} onChange={e=>update('phone',e.target.value)}/></Field>
+    <Field label="E-mail"><input type="email" value={c.email||''} onChange={e=>update('email',e.target.value)}/></Field></div>
+    <Field label="Observações e preferências"><textarea rows="4" value={c.notes||''} onChange={e=>update('notes',e.target.value)}/></Field>
+    <label className="payment-toggle"><input type="checkbox" checked={!!c.marketing_opt_in} onChange={e=>update('marketing_opt_in',e.target.checked)}/> Cliente autorizou receber ofertas e comunicações promocionais</label>
+    <p className="hint">Cadastro de contato não equivale a autorização para marketing. Registre o consentimento real. Integração automática do WhatsApp não está ativa.</p></div>
+    <div className="modal-actions"><button className="btn ghost" type="button" onClick={onClose}>Cancelar</button><button disabled={saving} className="btn primary" type="submit"><Save size={16}/>{saving?'Salvando...':'Salvar cliente'}</button></div></form></div></div>
+}
+
+function CustomerDetail({c,onClose,onEdit,openOS}) {
+  const list=[...(c.related||[])].sort((a,b)=>b.scheduled_date.localeCompare(a.scheduled_date));
+  return <div className="overlay" onMouseDown={e=>e.target===e.currentTarget&&onClose()}><div className="modal detail-modal">
+    <div className="modal-head"><div><span className="eyebrow">SANTI CARE / BASE DE CLIENTES</span><h2>{c.name}</h2><p>{c.phone} {c.email?'· '+c.email:''}</p></div><button className="icon-btn" onClick={onClose}><X/></button></div>
+    <div className="detail-content"><div className="client-summary"><div><small>Veículos</small><strong>{c.vehicles?.size||0}</strong></div><div><small>Atendimentos</small><strong>{list.length}</strong></div><div><small>Marketing autorizado</small><strong>{c.marketing_opt_in?'Sim':'Não'}</strong></div></div>
+    <section className="mini-panel"><h3>Preferências e observações</h3><p>{c.notes||'Sem observações cadastradas.'}</p></section>
+    <h3>Histórico de atendimentos</h3>{list.map(o=><button key={o.id} className="client-order" onClick={()=>openOS(o)}><div><strong>{o.vehicle} · {o.plate}</strong><small>{o.id} · {friendlyDate(o.scheduled_date)} · {o.service}</small></div><Badge stage={o.stage}/><ChevronRight size={15}/></button>)}
+    {!list.length&&<Empty text="Este cliente ainda não tem ordens de serviço."/>}
+    </div><div className="modal-actions"><button className="btn ghost" onClick={onEdit}>Editar cadastro</button><button className="btn primary" onClick={onClose}>Fechar</button></div>
+  </div></div>
 }
 
 function PanelHead({ title, subtitle, action }) {
@@ -1244,14 +1341,15 @@ function Detail({ order: o, all, onClose, onPatch, onEdit, onDelete, tab, setTab
                       <option key={s}>{s}</option>
                     ))}
                   </select>
-                  <small>A alteração registra um evento no histórico. A mensagem WhatsApp é enviada somente após você clicar no botão.</small>
+                  <small>O estágio pode ser alterado aqui ou no Kanban. O histórico é atualizado automaticamente. O WhatsApp continua manual.</small>
+                  <button className="btn ghost stretch" style={{marginTop:12}} onClick={onEdit}><Wrench size={16}/> Editar os dados completos</button>
                 </section>
                 <section className="mini-panel">
                   <h3>Pagamento</h3>
-                  <label className="payment-toggle">
-                    <input type="checkbox" checked={!!o.paid} onChange={(e) => onPatch(o, { paid: e.target.checked })} />
-                    <span>{o.paid ? 'Pagamento recebido' : 'Pagamento em aberto'}</span>
-                  </label>
+                  <select className="status-select" value={o.paid ? 'pago' : 'aberto'} onChange={(e)=>onPatch(o,{paid:e.target.value==='pago'})}>
+                    <option value="aberto">Pagamento em aberto</option>
+                    <option value="pago">Pagamento concluído</option>
+                  </select>
                 </section>
                 <section className="mini-panel">
                   <h3>Ações rápidas</h3>
