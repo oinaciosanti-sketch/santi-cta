@@ -174,7 +174,9 @@ function App() {
   const [clients, setClients] = useState([]);
   const [clientSelected, setClientSelected] = useState(null);
   const [clientEditing, setClientEditing] = useState(null);
-  const [reportWindow, setReportWindow] = useState('tres-dias');
+  const [reportWindow, setReportWindow] = useState('7');
+  const [reportFrom,setReportFrom]=useState('2026-10-21');
+  const [reportTo,setReportTo]=useState('2026-10-23');
   const [query, setQuery] = useState('');
   const [date, setDate] = useState(nowLocal());
   const [selected, setSelected] = useState(null);
@@ -183,6 +185,7 @@ function App() {
   const [busy, setBusy] = useState(true);
   const [notice, setNotice] = useState('');
   const [session, setSession] = useState(null);
+  const [authReady,setAuthReady] = useState(!configured);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [authBusy, setAuthBusy] = useState(false);
@@ -200,7 +203,7 @@ function App() {
       setSession({ user: { email: 'demonstração' } });
       return;
     }
-    supabase.auth.getSession().then(({ data }) => setSession(data.session));
+    supabase.auth.getSession().then(({ data,error }) => {if(error)toast('Falha ao verificar sessão: '+error.message);setSession(data?.session||null);setAuthReady(true)}).catch(e=>{toast(e.message);setAuthReady(true)});
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_evt, s) => setSession(s));
@@ -210,19 +213,21 @@ function App() {
   const refresh = async () => {
     setBusy(true);
     try {
-      setOrders(await getOrders());
-      setClients(await getCustomers());
+      const [ordersResult,clientsResult] = await Promise.allSettled([getOrders(),getCustomers()]);
+      if (ordersResult.status==='fulfilled') setOrders(ordersResult.value);
+      else toast('Falha ao carregar ordens: '+ordersResult.reason?.message);
+      if (clientsResult.status==='fulfilled') setClients(clientsResult.value);
+      else toast('Falha ao carregar clientes: '+clientsResult.reason?.message);
     } catch (e) {
-      toast(`Erro ao carregar: ${e.message}`);
-    } finally {
-      setBusy(false);
-    }
+      toast(`Erro ao carregar: ${e.message}. Use Atualizar para tentar novamente.`);
+    } finally {setBusy(false)}
   };
 
   useEffect(() => {
+    if (!authReady)return;
     if (session) refresh();
     else setBusy(false);
-  }, [session?.user?.id]);
+  }, [session?.user?.id,authReady]);
 
   const persist = async (next) => {
     setOrders(next);
@@ -261,10 +266,14 @@ function App() {
       ...data,
       plate: data.plate.toUpperCase().replace(/[^A-Z0-9]/g, ''),
       price: Number(data.price) || 0,
+      estimated_hours: data.estimated_hours === '' || data.estimated_hours == null ? null : Number(data.estimated_hours),
+      worked_hours: data.worked_hours === '' || data.worked_hours == null ? null : Number(data.worked_hours),
+      direct_cost: data.direct_cost === '' || data.direct_cost == null ? null : Number(data.direct_cost),
       history: data.history || [],
       photos: data.photos || [],
     };
 
+    if (!payload.id && payload.scheduled_date > nowLocal())payload.stage='Agendado';
     if (!payload.id) {
       payload.id = `S-${String(Date.now()).slice(-7)}`;
       payload.history = [{ at: datetime(), text: 'Ordem de serviço criada' }];
@@ -405,10 +414,15 @@ function App() {
   }, [clients, orders, query]);
 
   const reportOrders = useMemo(() => orders.filter(o => {
-    if (reportWindow === 'todos') return true;
-    if (reportWindow === 'mes') return isSameMonth(o.scheduled_date);
-    return ['2026-10-21','2026-10-22','2026-10-23'].includes(o.scheduled_date);
-  }), [orders, reportWindow]);
+    if (reportWindow==='todos')return true;
+    if(!o.scheduled_date)return false;
+    if(reportWindow==='personalizado')return (!reportFrom||o.scheduled_date>=reportFrom)&&(!reportTo||o.scheduled_date<=reportTo);
+    const n=Number(reportWindow);
+    if(reportWindow==='hoje')return o.scheduled_date===nowLocal();
+    const start=new Date();start.setHours(0,0,0,0);start.setDate(start.getDate()-(n-1));
+    const iso=[start.getFullYear(),String(start.getMonth()+1).padStart(2,'0'),String(start.getDate()).padStart(2,'0')].join('-');
+    return o.scheduled_date>=iso&&o.scheduled_date<=nowLocal();
+  }), [orders, reportWindow,reportFrom,reportTo]);
   const reportStats = useMemo(() => {
     const n = reportOrders.length;
     const completed = reportOrders.filter(o => o.stage === 'Concluído').length;
@@ -419,7 +433,14 @@ function App() {
       const k = o.mechanic?.trim() || 'Não atribuído';
       acc[k] = (acc[k] || 0) + 1; return acc;
     }, {})).sort((a,b)=>b[1]-a[1]);
-    return {n,completed,billed,received,activeJobs,techs,avg:n?billed/n:0};
+    const withHours=reportOrders.filter(o=>o.worked_hours!=null&&o.worked_hours!==''),hours=withHours.reduce((v,o)=>v+Number(o.worked_hours||0),0);
+    const estimated=reportOrders.filter(o=>o.estimated_hours!=null&&o.estimated_hours!=='').reduce((v,o)=>v+Number(o.estimated_hours||0),0);
+    const withCost=reportOrders.filter(o=>o.direct_cost!=null&&o.direct_cost!==''),costs=withCost.reduce((v,o)=>v+Number(o.direct_cost||0),0);
+    const contribution=withCost.reduce((v,o)=>v+Number(o.price||0)-Number(o.direct_cost||0),0);
+    const due=reportOrders.filter(o=>o.promised_at&&o.stage!=='Concluído'&&o.stage!=='Pronto para entrega'&&new Date(o.promised_at).getTime()<Date.now());
+    const reworks=reportOrders.filter(o=>o.rework===true);
+    const techDetail=Object.entries(reportOrders.reduce((a,o)=>{const name=o.mechanic?.trim()||'Não atribuído';a[name]??={name,orders:0,hours:0,estimated:0,withHours:0,reworks:0};a[name].orders++;if(o.worked_hours!=null){a[name].hours+=Number(o.worked_hours||0);a[name].withHours++}if(o.estimated_hours!=null)a[name].estimated+=Number(o.estimated_hours||0);if(o.rework)a[name].reworks++;return a},{})).map(([name,v])=>v).sort((a,b)=>b.hours-a.hours);
+    return {n,completed,billed,received,activeJobs,techs,avg:n?billed/n:0,hours,estimated,hourCount:withHours.length,costCount:withCost.length,costs,contribution,due,reworks,techDetail};
   }, [reportOrders]);
 
   const signin = async (e) => {
@@ -924,33 +945,40 @@ function App() {
 
               {page === 'Relatórios' && (
                 <div className="reports-v3">
-                  <div className="panel"><PanelHead title="Central de indicadores" subtitle="Produtividade, receita cadastrada e fluxo de veículos"
-                    action={<select className="status-select" style={{width:'auto'}} value={reportWindow} onChange={e=>setReportWindow(e.target.value)}>
-                      <option value="tres-dias">21 a 23/10/2026</option><option value="mes">Mês atual</option><option value="todos">Todo o histórico</option>
-                    </select>}/></div>
+                  <div className="panel"><PanelHead title="SANTI Control • Indicadores" subtitle="Operação, horas apontadas, custos e alertas por período"
+                    action={<div className="report-filters"><select aria-label="Período do relatório" className="status-select" value={reportWindow} onChange={e=>setReportWindow(e.target.value)}>
+                      <option value="hoje">Hoje</option><option value="7">Últimos 7 dias</option><option value="15">Últimos 15 dias</option><option value="30">Últimos 30 dias</option><option value="todos">Geral</option><option value="personalizado">Personalizado</option>
+                    </select>{reportWindow==='personalizado'&&<><input aria-label="Data inicial" className="date-picker" type="date" value={reportFrom} onChange={e=>setReportFrom(e.target.value)}/><span>até</span><input aria-label="Data final" className="date-picker" type="date" min={reportFrom} value={reportTo} onChange={e=>setReportTo(e.target.value)}/></>}</div>}/></div>
                   <div className="report-kpis">
                     <Metric label="Atendimentos" value={reportStats.n} helper="Ordens no período"/>
                     <Metric label="Em andamento" value={reportStats.activeJobs} helper="Veículos em processo"/>
-                    <Metric label="Concluídos" value={reportStats.completed} helper={reportStats.n?`${Math.round(reportStats.completed/reportStats.n*100)}% dos chamados`: 'Sem chamados'}/>
-                    <Metric label="Valor cadastrado" value={formatMoney(reportStats.billed)} helper="Não representa lucro"/>
-                    <Metric label="Recebido (marcado)" value={formatMoney(reportStats.received)} helper="Conforme status de pagamento"/>
-                    <Metric label="Ticket médio" value={formatMoney(reportStats.avg)} helper="Valor das OS / quantidade"/>
+                    <Metric label="Concluídos" value={reportStats.completed} helper={reportStats.n?`${Math.round(reportStats.completed/reportStats.n*100)}% das ordens`: 'Sem chamados'}/>
+                    <Metric label="Valor de serviços" value={formatMoney(reportStats.billed)} helper="Receita cadastrada — não é lucro"/>
+                    <Metric label="Recebido" value={formatMoney(reportStats.received)} helper="Conforme status de pagamento"/>
+                    <Metric label="Horas apontadas" value={reportStats.hourCount?reportStats.hours.toFixed(1)+' h':'Sem dados'} helper={`${reportStats.hourCount}/${reportStats.n} OS com horas registradas`}/>
+                    <Metric label="Contribuição conhecida" value={reportStats.costCount?formatMoney(reportStats.contribution):'Sem dados'} helper={`Receita menos custos diretos em ${reportStats.costCount} OS; não é lucro líquido`}/>
+                    <Metric label="Retrabalhos sinalizados" value={reportStats.reworks.length} helper="Exige marcação na OS"/>
+                    <Metric label="Prazo vencido" value={reportStats.due.length} helper="OS abertas com entrega prometida vencida"/>
                   </div>
                   <div className="report-panes">
-                    <section className="panel"><PanelHead title="Funil operacional" subtitle="Distribuição por etapa"/>
-                      <div className="report-bars">{STAGES.map(stage=>{
-                        const count=reportOrders.filter(o=>o.stage===stage).length;
-                        return <div className="report-bar" key={stage}><span>{stage}</span><div><i style={{width:`${reportStats.n?count/reportStats.n*100:0}%`,background:COLORS[stage]}}/></div><b>{count}</b></div>
-                      })}</div></section>
-                    <section className="panel"><PanelHead title="Carga por técnico" subtitle="OS atribuídas no período (não representa horas trabalhadas)"/>
-                      <div className="report-bars">{reportStats.techs.map(([tech,n])=><div className="report-bar" key={tech}><span>{tech}</span><div><i style={{width:`${reportStats.n?n/reportStats.n*100:0}%`,background:'#ec5357'}}/></div><b>{n}</b></div>)}</div></section>
+                    <section className="panel"><PanelHead title="Funil operacional" subtitle="Distribuição das etapas"/><div className="report-bars">{STAGES.map(stage=>{
+                      const count=reportOrders.filter(o=>o.stage===stage).length;
+                      return <div className="report-bar" key={stage}><span>{stage}</span><div><i style={{width:`${reportStats.n?count/reportStats.n*100:0}%`,background:COLORS[stage]}}/></div><b>{count}</b></div>;
+                    })}</div></section>
+                    <section className="panel"><PanelHead title="Produtividade por técnico" subtitle="Horas registradas nas OS — não equivale à jornada de trabalho"/>
+                      <div className="tech-table-wrap"><table><thead><tr><th>TÉCNICO</th><th>OS</th><th>HORAS</th><th>PREVISTAS</th><th>RETRABALHOS</th></tr></thead><tbody>{reportStats.techDetail.map(t=><tr key={t.name}><td><strong>{t.name}</strong></td><td>{t.orders}</td><td>{t.withHours?t.hours.toFixed(1)+' h':'—'}</td><td>{t.estimated?t.estimated.toFixed(1)+' h':'—'}</td><td>{t.reworks}</td></tr>)}</tbody></table></div>
+                    </section>
                   </div>
-                  <div className="panel"><PanelHead title="Agenda por dia" subtitle="Quantidade de serviços agendados e recebidos por data"/>
-                    <div className="daily-report">{[...new Set(reportOrders.map(o=>o.scheduled_date))].sort().map(day=>{
+                  <div className="panel"><PanelHead title="Alertas operacionais" subtitle="Prioridades que exigem ação"/>
+                    <div className="alerts-list">{reportStats.due.map(o=><button key={o.id} onClick={()=>setSelected(o)} className="alert-item"><AlertCircle size={17}/><span><strong>Entrega vencida: {o.vehicle}</strong><small>{o.id} • {o.customer_name} • prazo {new Date(o.promised_at).toLocaleString('pt-BR')}</small></span><ChevronRight size={17}/></button>)}
+                    {reportStats.reworks.map(o=><button key={o.id} onClick={()=>setSelected(o)} className="alert-item"><AlertCircle size={17}/><span><strong>Retrabalho: {o.vehicle}</strong><small>{o.id} • {o.mechanic||'Não atribuído'}</small></span><ChevronRight size={17}/></button>)}
+                    {!reportStats.due.length&&!reportStats.reworks.length&&<Empty text="Nenhum alerta de prazo ou retrabalho registrado no período."/>}</div>
+                  </div>
+                  <div className="panel"><PanelHead title="Agenda por dia" subtitle="Volume previsto e atendimentos que avançaram"/><div className="daily-report">{[...new Set(reportOrders.map(o=>o.scheduled_date))].sort().map(day=>{
                       const list=reportOrders.filter(o=>o.scheduled_date===day);
-                      return <div className="day-tile" key={day}><span>{friendlyDate(day)}</span><strong>{list.length}</strong><small>{list.filter(o=>o.stage!=='Agendado').length} já recebidos ou avançados</small></div>
+                      return <div className="day-tile" key={day}><span>{friendlyDate(day)}</span><strong>{list.length}</strong><small>{list.filter(o=>o.stage!=='Agendado').length} avançados</small></div>;
                     })}</div></div>
-                  <div className="report-footnote">Indicadores calculados com os dados registrados no SANTI CTA. Ainda não medem lucro real, horas produtivas ou cumprimento de prazo; exigirão custos, apontamento de tempo e datas de conclusão.</div>
+                  <div className="report-footnote">Importante: horas e custos aparecem somente quando registrados; lucro líquido exige despesas fixas, tributos e outras apropriações. O atraso compara a entrega prometida com o horário atual. Indicadores não devem tratar dados ausentes como zero.</div>
                 </div>
               )}
 
@@ -1216,6 +1244,15 @@ function EditModal({ order, onClose, onSave }) {
               </Field>
             </div>
 
+            <h3>Produtividade e controle</h3>
+            <div className="form-grid">
+              <Field label="Horas previstas (h)"><input type="number" min="0" step="0.25" value={f.estimated_hours??''} onChange={e=>update('estimated_hours',e.target.value)}/></Field>
+              <Field label="Horas efetivamente trabalhadas (h)"><input type="number" min="0" step="0.25" value={f.worked_hours??''} onChange={e=>update('worked_hours',e.target.value)}/></Field>
+              <Field label="Custo direto do serviço (R$)"><input type="number" min="0" step="0.01" value={f.direct_cost??''} onChange={e=>update('direct_cost',e.target.value)}/></Field>
+              <Field label="Entrega prometida"><input type="datetime-local" value={f.promised_at?String(f.promised_at).slice(0,16):''} onChange={e=>update('promised_at',e.target.value||null)}/></Field>
+              <Field label="Retorno por falha no reparo"><select value={String(!!f.rework)} onChange={e=>update('rework',e.target.value==='true')}><option value="false">Não</option><option value="true">Sim — retrabalho</option></select></Field>
+            </div>
+            <p className="hint">Horas trabalhadas são lançamentos manuais nesta versão; custo direto não inclui despesas fixas nem tributos.</p>
             <Field label="Queixa ou solicitação">
               <textarea rows="3" value={f.description || ''} onChange={(e) => update('description', e.target.value)} />
             </Field>

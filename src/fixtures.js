@@ -23,7 +23,12 @@ export const testAppointments = [
         "at": "2026-10-21 08:00",
         "text": "Chamado fictício cadastrado para simulação"
       }
-    ]
+    ],
+    "estimated_hours": 1.0,
+    "worked_hours": 0.75,
+    "direct_cost": 85.1,
+    "promised_at": "2026-10-21T23:30:00-03:00",
+    "rework": false
   },
   {
     "id": "TESTE-26-002",
@@ -49,7 +54,12 @@ export const testAppointments = [
         "at": "2026-10-21 08:00",
         "text": "Chamado fictício cadastrado para simulação"
       }
-    ]
+    ],
+    "estimated_hours": 1.75,
+    "worked_hours": 1.35,
+    "direct_cost": 106.72,
+    "promised_at": "2026-10-21T23:30:00-03:00",
+    "rework": false
   },
   {
     "id": "TESTE-26-003",
@@ -75,7 +85,12 @@ export const testAppointments = [
         "at": "2026-10-21 08:00",
         "text": "Chamado fictício cadastrado para simulação"
       }
-    ]
+    ],
+    "estimated_hours": 2.5,
+    "worked_hours": 1.95,
+    "direct_cost": 128.34,
+    "promised_at": "2026-10-21T15:30:00-03:00",
+    "rework": false
   },
   {
     "id": "TESTE-26-004",
@@ -101,7 +116,12 @@ export const testAppointments = [
         "at": "2026-10-21 08:00",
         "text": "Chamado fictício cadastrado para simulação"
       }
-    ]
+    ],
+    "estimated_hours": 3.25,
+    "worked_hours": 2.55,
+    "direct_cost": 149.96,
+    "promised_at": "2026-10-21T23:30:00-03:00",
+    "rework": false
   },
   {
     "id": "TESTE-26-005",
@@ -127,7 +147,12 @@ export const testAppointments = [
         "at": "2026-10-21 08:00",
         "text": "Chamado fictício cadastrado para simulação"
       }
-    ]
+    ],
+    "estimated_hours": 1.0,
+    "worked_hours": 0.75,
+    "direct_cost": 171.58,
+    "promised_at": "2026-10-21T23:30:00-03:00",
+    "rework": false
   },
   {
     "id": "TESTE-26-006",
@@ -153,7 +178,12 @@ export const testAppointments = [
         "at": "2026-10-21 08:00",
         "text": "Chamado fictício cadastrado para simulação"
       }
-    ]
+    ],
+    "estimated_hours": 1.75,
+    "worked_hours": 1.35,
+    "direct_cost": 193.2,
+    "promised_at": "2026-10-21T23:30:00-03:00",
+    "rework": false
   },
   {
     "id": "TESTE-26-007",
@@ -179,7 +209,12 @@ export const testAppointments = [
         "at": "2026-10-21 08:00",
         "text": "Chamado fictício cadastrado para simulação"
       }
-    ]
+    ],
+    "estimated_hours": 2.5,
+    "worked_hours": 1.95,
+    "direct_cost": 214.82,
+    "promised_at": "2026-10-21T23:30:00-03:00",
+    "rework": true
   },
   {
     "id": "TESTE-26-008",
@@ -205,7 +240,12 @@ export const testAppointments = [
         "at": "2026-10-21 08:00",
         "text": "Chamado fictício cadastrado para simulação"
       }
-    ]
+    ],
+    "estimated_hours": 3.25,
+    "worked_hours": 2.55,
+    "direct_cost": 236.44,
+    "promised_at": "2026-10-21T23:30:00-03:00",
+    "rework": false
   },
   {
     "id": "TESTE-26-009",
@@ -228,10 +268,15 @@ export const testAppointments = [
     "photos": [],
     "history": [
       {
-        "at": "2026-10-22 08:00",
-        "text": "Chamado fictício cadastrado para simulação"
+        "at": "21/10/2026, 10:00:00",
+        "text": "Atendimento de teste agendado para data futura"
       }
-    ]
+    ],
+    "estimated_hours": 2.5,
+    "worked_hours": null,
+    "direct_cost": null,
+    "promised_at": null,
+    "rework": false
   },
   {
     "id": "TESTE-26-010",
@@ -242,7 +287,7 @@ export const testAppointments = [
     "year": "2017",
     "service": "Freios",
     "description": "Dados fictícios de teste — atendimento 10.",
-    "stage": "Recebido",
+    "stage": "Agendado",
     "scheduled_date": "2026-10-22",
     "scheduled_time": "09:30",
     "mechanic": "Bruno",
@@ -254,10 +299,15 @@ export const testAppointments = [
     "photos": [],
     "history": [
       {
-        "at": "2026-10-22 08:00",
-        "text": "Chamado fictício cadastrado para simulação"
+        "at": "21/10/2026, 10:00:00",
+        "text": "Atendimento de teste agendado para data futura"
       }
-    ]
+    ],
+    "estimated_hours": 1.5,
+    "worked_hours": null,
+    "direct_cost": null,
+    "promised_at": null,
+    "rework": false
   },
   {
     "id": "TESTE-26-011",
@@ -268,7 +318,7 @@ export const testAppointments = [
     "year": "2018",
     "service": "Suspensão",
     "description": "Dados fictícios de teste — atendimento 11.",
-    "stage": "Em análise",
+    "stage": "Agendado",
     "scheduled_date": "2026-10-22",
     "scheduled_time": "10:00",
     "mechanic": "Carlos",
@@ -280,10 +330,15 @@ export const testAppointments = [
     "photos": [],
     "history": [
       {
-        "at": "2026-10-22 08:00",
-        "text": "Chamado fictício cadastrado para simulação"
+        "at": "21/10/2026, 10:00:00",
+        "text": "Atendimento de teste agendado para data futura"
       }
-    ]
+    ],
+    "estimated_hours": 2.0,
+    "worked_hours": null,
+    "direct_cost": null,
+    "promised_at": null,
+    "rework": false
   },
   {
     "id": "TESTE-26-012",
@@ -306,10 +361,15 @@ export const testAppointments = [
     "photos": [],
     "history": [
       {
-        "at": "2026-10-22 08:00",
-        "text": "Chamado fictício cadastrado para simulação"
+        "at": "21/10/2026, 10:00:00",
+        "text": "Atendimento de teste agendado para data futura"
       }
-    ]
+    ],
+    "estimated_hours": 2.5,
+    "worked_hours": null,
+    "direct_cost": null,
+    "promised_at": null,
+    "rework": false
   },
   {
     "id": "TESTE-26-013",
@@ -320,7 +380,7 @@ export const testAppointments = [
     "year": "2020",
     "service": "Troca de óleo",
     "description": "Dados fictícios de teste — atendimento 13.",
-    "stage": "Em manutenção",
+    "stage": "Agendado",
     "scheduled_date": "2026-10-22",
     "scheduled_time": "12:00",
     "mechanic": "Lucas",
@@ -332,10 +392,15 @@ export const testAppointments = [
     "photos": [],
     "history": [
       {
-        "at": "2026-10-22 08:00",
-        "text": "Chamado fictício cadastrado para simulação"
+        "at": "21/10/2026, 10:00:00",
+        "text": "Atendimento de teste agendado para data futura"
       }
-    ]
+    ],
+    "estimated_hours": 1.5,
+    "worked_hours": null,
+    "direct_cost": null,
+    "promised_at": null,
+    "rework": false
   },
   {
     "id": "TESTE-26-014",
@@ -358,10 +423,15 @@ export const testAppointments = [
     "photos": [],
     "history": [
       {
-        "at": "2026-10-22 08:00",
-        "text": "Chamado fictício cadastrado para simulação"
+        "at": "21/10/2026, 10:00:00",
+        "text": "Atendimento de teste agendado para data futura"
       }
-    ]
+    ],
+    "estimated_hours": 2.0,
+    "worked_hours": null,
+    "direct_cost": null,
+    "promised_at": null,
+    "rework": false
   },
   {
     "id": "TESTE-26-015",
@@ -372,7 +442,7 @@ export const testAppointments = [
     "year": "2022",
     "service": "Elétrica",
     "description": "Dados fictícios de teste — atendimento 15.",
-    "stage": "Recebido",
+    "stage": "Agendado",
     "scheduled_date": "2026-10-22",
     "scheduled_time": "14:00",
     "mechanic": "Carlos",
@@ -384,10 +454,15 @@ export const testAppointments = [
     "photos": [],
     "history": [
       {
-        "at": "2026-10-22 08:00",
-        "text": "Chamado fictício cadastrado para simulação"
+        "at": "21/10/2026, 10:00:00",
+        "text": "Atendimento de teste agendado para data futura"
       }
-    ]
+    ],
+    "estimated_hours": 2.5,
+    "worked_hours": null,
+    "direct_cost": null,
+    "promised_at": null,
+    "rework": false
   },
   {
     "id": "TESTE-26-016",
@@ -410,10 +485,15 @@ export const testAppointments = [
     "photos": [],
     "history": [
       {
-        "at": "2026-10-22 08:00",
-        "text": "Chamado fictício cadastrado para simulação"
+        "at": "21/10/2026, 10:00:00",
+        "text": "Atendimento de teste agendado para data futura"
       }
-    ]
+    ],
+    "estimated_hours": 1.5,
+    "worked_hours": null,
+    "direct_cost": null,
+    "promised_at": null,
+    "rework": false
   },
   {
     "id": "TESTE-26-017",
@@ -436,10 +516,15 @@ export const testAppointments = [
     "photos": [],
     "history": [
       {
-        "at": "2026-10-23 08:00",
-        "text": "Chamado fictício cadastrado para simulação"
+        "at": "21/10/2026, 10:00:00",
+        "text": "Atendimento de teste agendado para data futura"
       }
-    ]
+    ],
+    "estimated_hours": 2.0,
+    "worked_hours": null,
+    "direct_cost": null,
+    "promised_at": null,
+    "rework": false
   },
   {
     "id": "TESTE-26-018",
@@ -462,10 +547,15 @@ export const testAppointments = [
     "photos": [],
     "history": [
       {
-        "at": "2026-10-23 08:00",
-        "text": "Chamado fictício cadastrado para simulação"
+        "at": "21/10/2026, 10:00:00",
+        "text": "Atendimento de teste agendado para data futura"
       }
-    ]
+    ],
+    "estimated_hours": 2.5,
+    "worked_hours": null,
+    "direct_cost": null,
+    "promised_at": null,
+    "rework": false
   },
   {
     "id": "TESTE-26-019",
@@ -488,10 +578,15 @@ export const testAppointments = [
     "photos": [],
     "history": [
       {
-        "at": "2026-10-23 08:00",
-        "text": "Chamado fictício cadastrado para simulação"
+        "at": "21/10/2026, 10:00:00",
+        "text": "Atendimento de teste agendado para data futura"
       }
-    ]
+    ],
+    "estimated_hours": 1.5,
+    "worked_hours": null,
+    "direct_cost": null,
+    "promised_at": null,
+    "rework": false
   },
   {
     "id": "TESTE-26-020",
@@ -514,10 +609,15 @@ export const testAppointments = [
     "photos": [],
     "history": [
       {
-        "at": "2026-10-23 08:00",
-        "text": "Chamado fictício cadastrado para simulação"
+        "at": "21/10/2026, 10:00:00",
+        "text": "Atendimento de teste agendado para data futura"
       }
-    ]
+    ],
+    "estimated_hours": 2.0,
+    "worked_hours": null,
+    "direct_cost": null,
+    "promised_at": null,
+    "rework": false
   },
   {
     "id": "TESTE-26-021",
@@ -540,10 +640,15 @@ export const testAppointments = [
     "photos": [],
     "history": [
       {
-        "at": "2026-10-23 08:00",
-        "text": "Chamado fictício cadastrado para simulação"
+        "at": "21/10/2026, 10:00:00",
+        "text": "Atendimento de teste agendado para data futura"
       }
-    ]
+    ],
+    "estimated_hours": 2.5,
+    "worked_hours": null,
+    "direct_cost": null,
+    "promised_at": null,
+    "rework": false
   },
   {
     "id": "TESTE-26-022",
@@ -566,10 +671,15 @@ export const testAppointments = [
     "photos": [],
     "history": [
       {
-        "at": "2026-10-23 08:00",
-        "text": "Chamado fictício cadastrado para simulação"
+        "at": "21/10/2026, 10:00:00",
+        "text": "Atendimento de teste agendado para data futura"
       }
-    ]
+    ],
+    "estimated_hours": 1.5,
+    "worked_hours": null,
+    "direct_cost": null,
+    "promised_at": null,
+    "rework": false
   },
   {
     "id": "TESTE-26-023",
@@ -592,10 +702,15 @@ export const testAppointments = [
     "photos": [],
     "history": [
       {
-        "at": "2026-10-23 08:00",
-        "text": "Chamado fictício cadastrado para simulação"
+        "at": "21/10/2026, 10:00:00",
+        "text": "Atendimento de teste agendado para data futura"
       }
-    ]
+    ],
+    "estimated_hours": 2.0,
+    "worked_hours": null,
+    "direct_cost": null,
+    "promised_at": null,
+    "rework": false
   },
   {
     "id": "TESTE-26-024",
@@ -618,9 +733,14 @@ export const testAppointments = [
     "photos": [],
     "history": [
       {
-        "at": "2026-10-23 08:00",
-        "text": "Chamado fictício cadastrado para simulação"
+        "at": "21/10/2026, 10:00:00",
+        "text": "Atendimento de teste agendado para data futura"
       }
-    ]
+    ],
+    "estimated_hours": 2.5,
+    "worked_hours": null,
+    "direct_cost": null,
+    "promised_at": null,
+    "rework": false
   }
 ];

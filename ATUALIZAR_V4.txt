@@ -1,0 +1,13 @@
+SANTI CTA V4 — ATUALIZAÇÃO
+
+1. No GitHub, substitua os arquivos do projeto pelos desta versão. Commit na main.
+2. No Supabase / SQL Editor, execute apenas supabase/migration_v4_indicadores.sql (não precisa apagar ou recriar tabelas).
+3. Na Vercel, confirme o deploy novo.
+4. Para testar dados simulados, use Configurações > Carregar 24 chamados de teste, somente no modo demonstração.
+5. Em Relatórios, escolha Hoje, 7, 15, 30 dias, Geral ou Personalizado.
+6. Abra uma OS > Editar para preencher horas previstas, horas trabalhadas, custo direto, data/hora de entrega prometida e retrabalho.
+
+IMPORTANTE: os novos campos só aparecem em produção após rodar a migração. O histórico existente não é apagado.
+Indicadores de margem são parciais: receita - custos diretos nas OS COM custo registrado; não são lucro.
+Uma OS para data futura começa Agendada. Um veículo pode chegar antes, mudando manualmente para Recebido.
+Mensagens WhatsApp continuam manuais.
