@@ -170,6 +170,8 @@ function initials(n) {
 
 function App() {
   const [page, setPage] = useState('Dashboard');
+  const [reportSection,setReportSection] = useState('Oficina');
+  const [reportsOpen,setReportsOpen] = useState(false);
   const [orders, setOrders] = useState([]);
   const [clients, setClients] = useState([]);
   const [clientSelected, setClientSelected] = useState(null);
@@ -277,12 +279,20 @@ function App() {
     if (!payload.id) {
       payload.id = `S-${String(Date.now()).slice(-7)}`;
       payload.history = [{ at: datetime(), text: 'Ordem de serviço criada' }];
-    } else if (existing?.stage !== payload.stage) {
-      payload.history = [
-        ...(existing?.history || []),
-        { at: datetime(), text: `Etapa alterada: ${existing?.stage || '—'} → ${payload.stage}` },
-      ];
+    } else if (existing) {
+      const changes = [];
+      if(existing.stage !== payload.stage) changes.push(`Etapa: ${existing.stage} → ${payload.stage}`);
+      if(Boolean(existing.paid) !== Boolean(payload.paid)) changes.push(`Pagamento: ${existing.paid?'concluído':'em aberto'} → ${payload.paid?'concluído':'em aberto'}`);
+      for(const [field,label] of [['estimated_hours','Horas previstas'],['worked_hours','Horas trabalhadas']]) {
+        if(String(existing[field]??'') !== String(payload[field]??'')) {
+          const reason = (data.hours_change_reason||'').trim();
+          if(!reason){toast('Informe o motivo da alteração das horas.');return;}
+          changes.push(`${label}: ${existing[field]??'não registrado'} h → ${payload[field]??'não registrado'} h • Motivo: ${reason}`);
+        }
+      }
+      payload.history = [...(existing.history||[]),...changes.map(text=>({at:datetime(),text}))];
     }
+    delete payload.hours_change_reason;
 
     try {
       await saveOrder(payload);
@@ -507,9 +517,10 @@ function App() {
               <button
                 key={n}
                 className={`navitem ${page === n ? 'active' : ''}`}
+                onMouseEnter={() => {if(n==='Relatórios')setReportsOpen(true)}}
                 onClick={() => {
                   setPage(n);
-                  setSidebar(false);
+                  if(n==='Relatórios'){setReportsOpen(v=>!v);setSidebar(true)}else setSidebar(false);
                 }}
               >
                 <I size={18} />
@@ -518,6 +529,10 @@ function App() {
               </button>
             );
           })}
+          {reportsOpen && <div className="reports-submenu">
+            <button className={page==='Relatórios'&&reportSection==='Oficina'?'chosen':''} onClick={()=>{setPage('Relatórios');setReportSection('Oficina');setSidebar(false)}}>Oficina</button>
+            <button className={page==='Relatórios'&&reportSection==='Equipe'?'chosen':''} onClick={()=>{setPage('Relatórios');setReportSection('Equipe');setSidebar(false)}}>Equipe</button>
+          </div>}
         </nav>
 
         <div className="sidebar-foot">
@@ -817,7 +832,7 @@ function App() {
                                 >
                                   <div className="kanban-card-top">
                                     <span>{o.id}</span>
-                                    <strong>{o.scheduled_time}</strong>
+                                    <strong>{friendlyDate(o.scheduled_date).slice(0,6)}{friendlyDate(o.scheduled_date).slice(8)} {o.scheduled_time}</strong>
                                   </div>
                                   <h3>{o.vehicle}</h3>
                                   <div className="plate">{o.plate}</div>
@@ -945,11 +960,12 @@ function App() {
 
               {page === 'Relatórios' && (
                 <div className="reports-v3">
-                  <div className="panel"><PanelHead title="SANTI Control • Indicadores" subtitle="Operação, horas apontadas, custos e alertas por período"
+                  <div className="report-section-switch"><button className={reportSection==='Oficina'?'selected':''} onClick={()=>setReportSection('Oficina')}>Oficina</button><button className={reportSection==='Equipe'?'selected':''} onClick={()=>setReportSection('Equipe')}>Equipe</button></div>
+                  <div className="panel"><PanelHead title={reportSection==='Oficina'?'SANTI Control • Oficina':'SANTI Control • Equipe'} subtitle="Operação, horas apontadas, custos e alertas por período"
                     action={<div className="report-filters"><select aria-label="Período do relatório" className="status-select" value={reportWindow} onChange={e=>setReportWindow(e.target.value)}>
                       <option value="hoje">Hoje</option><option value="7">Últimos 7 dias</option><option value="15">Últimos 15 dias</option><option value="30">Últimos 30 dias</option><option value="todos">Geral</option><option value="personalizado">Personalizado</option>
                     </select>{reportWindow==='personalizado'&&<><input aria-label="Data inicial" className="date-picker" type="date" value={reportFrom} onChange={e=>setReportFrom(e.target.value)}/><span>até</span><input aria-label="Data final" className="date-picker" type="date" min={reportFrom} value={reportTo} onChange={e=>setReportTo(e.target.value)}/></>}</div>}/></div>
-                  <div className="report-kpis">
+                  {reportSection === 'Oficina' && <div className="report-kpis">
                     <Metric label="Atendimentos" value={reportStats.n} helper="Ordens no período"/>
                     <Metric label="Em andamento" value={reportStats.activeJobs} helper="Veículos em processo"/>
                     <Metric label="Concluídos" value={reportStats.completed} helper={reportStats.n?`${Math.round(reportStats.completed/reportStats.n*100)}% das ordens`: 'Sem chamados'}/>
@@ -960,16 +976,19 @@ function App() {
                     <Metric label="Retrabalhos sinalizados" value={reportStats.reworks.length} helper="Exige marcação na OS"/>
                     <Metric label="Prazo vencido" value={reportStats.due.length} helper="OS abertas com entrega prometida vencida"/>
                   </div>
+                  }
                   <div className="report-panes">
-                    <section className="panel"><PanelHead title="Funil operacional" subtitle="Distribuição das etapas"/><div className="report-bars">{STAGES.map(stage=>{
+                    {reportSection==='Oficina' && <section className="panel"><PanelHead title="Funil operacional" subtitle="Distribuição das etapas"/><div className="report-bars">{STAGES.map(stage=>{
                       const count=reportOrders.filter(o=>o.stage===stage).length;
                       return <div className="report-bar" key={stage}><span>{stage}</span><div><i style={{width:`${reportStats.n?count/reportStats.n*100:0}%`,background:COLORS[stage]}}/></div><b>{count}</b></div>;
-                    })}</div></section>
+                    })}</div></section>}
                     <section className="panel"><PanelHead title="Produtividade por técnico" subtitle="Horas registradas nas OS — não equivale à jornada de trabalho"/>
                       <div className="tech-table-wrap"><table><thead><tr><th>TÉCNICO</th><th>OS</th><th>HORAS</th><th>PREVISTAS</th><th>RETRABALHOS</th></tr></thead><tbody>{reportStats.techDetail.map(t=><tr key={t.name}><td><strong>{t.name}</strong></td><td>{t.orders}</td><td>{t.withHours?t.hours.toFixed(1)+' h':'—'}</td><td>{t.estimated?t.estimated.toFixed(1)+' h':'—'}</td><td>{t.reworks}</td></tr>)}</tbody></table></div>
+                      {reportSection==='Equipe' && <div className="tech-performance-cards">{reportStats.techDetail.map(t=><div className="tech-performance-card" key={t.name}><strong>{t.name}</strong><div><span>Ordens vinculadas</span><b>{t.orders}</b></div><div><span>Horas trabalhadas</span><b>{t.withHours?t.hours.toFixed(1)+' h':'Não lançadas'}</b></div><div><span>Horas previstas</span><b>{t.estimated?t.estimated.toFixed(1)+' h':'Não lançadas'}</b></div><div><span>Eficiência técnica*</span><b>{t.withHours&&t.hours>0&&t.estimated?(t.estimated/t.hours*100).toFixed(1)+'%':'Sem dados'}</b></div><div><span>Retrabalhos</span><b>{t.reworks}</b></div></div>)}</div>}
+                      {reportSection==='Equipe' && <p className="report-footnote">* Eficiência técnica = horas previstas ÷ horas registradas. Não representa utilização da jornada nem autoriza comparações individuais sem considerar a complexidade dos serviços.</p>}
                     </section>
                   </div>
-                  <div className="panel"><PanelHead title="Alertas operacionais" subtitle="Prioridades que exigem ação"/>
+                  {reportSection==='Oficina' && <><div className="panel"><PanelHead title="Alertas operacionais" subtitle="Prioridades que exigem ação"/>
                     <div className="alerts-list">{reportStats.due.map(o=><button key={o.id} onClick={()=>setSelected(o)} className="alert-item"><AlertCircle size={17}/><span><strong>Entrega vencida: {o.vehicle}</strong><small>{o.id} • {o.customer_name} • prazo {new Date(o.promised_at).toLocaleString('pt-BR')}</small></span><ChevronRight size={17}/></button>)}
                     {reportStats.reworks.map(o=><button key={o.id} onClick={()=>setSelected(o)} className="alert-item"><AlertCircle size={17}/><span><strong>Retrabalho: {o.vehicle}</strong><small>{o.id} • {o.mechanic||'Não atribuído'}</small></span><ChevronRight size={17}/></button>)}
                     {!reportStats.due.length&&!reportStats.reworks.length&&<Empty text="Nenhum alerta de prazo ou retrabalho registrado no período."/>}</div>
@@ -978,6 +997,7 @@ function App() {
                       const list=reportOrders.filter(o=>o.scheduled_date===day);
                       return <div className="day-tile" key={day}><span>{friendlyDate(day)}</span><strong>{list.length}</strong><small>{list.filter(o=>o.stage!=='Agendado').length} avançados</small></div>;
                     })}</div></div>
+                  </>}
                   <div className="report-footnote">Importante: horas e custos aparecem somente quando registrados; lucro líquido exige despesas fixas, tributos e outras apropriações. O atraso compara a entrega prometida com o horário atual. Indicadores não devem tratar dados ausentes como zero.</div>
                 </div>
               )}
@@ -1248,6 +1268,7 @@ function EditModal({ order, onClose, onSave }) {
             <div className="form-grid">
               <Field label="Horas previstas (h)"><input type="number" min="0" step="0.25" value={f.estimated_hours??''} onChange={e=>update('estimated_hours',e.target.value)}/></Field>
               <Field label="Horas efetivamente trabalhadas (h)"><input type="number" min="0" step="0.25" value={f.worked_hours??''} onChange={e=>update('worked_hours',e.target.value)}/></Field>
+              {order.id && (String(f.worked_hours??'')!==String(order.worked_hours??'') || String(f.estimated_hours??'')!==String(order.estimated_hours??'')) && <Field label="Motivo da correção das horas *"><input required value={f.hours_change_reason||''} onChange={e=>update('hours_change_reason',e.target.value)} placeholder="Ex.: apontamento corrigido após conferência" /></Field>}
               <Field label="Custo direto do serviço (R$)"><input type="number" min="0" step="0.01" value={f.direct_cost??''} onChange={e=>update('direct_cost',e.target.value)}/></Field>
               <Field label="Entrega prometida"><input type="datetime-local" value={f.promised_at?String(f.promised_at).slice(0,16):''} onChange={e=>update('promised_at',e.target.value||null)}/></Field>
               <Field label="Retorno por falha no reparo"><select value={String(!!f.rework)} onChange={e=>update('rework',e.target.value==='true')}><option value="false">Não</option><option value="true">Sim — retrabalho</option></select></Field>

@@ -1,0 +1,16 @@
+SANTI CTA V5 - ATUALIZAÇÃO
+
+1. Substitua os arquivos do GitHub pelo conteúdo da pasta santi-cta (não envie o ZIP fechado).
+2. Faça commit na branch main. A Vercel publicará automaticamente se estiver conectada.
+3. NÃO é preciso executar SQL novo para esta atualização; use as migrações V3/V4 caso ainda não tenham sido aplicadas.
+
+MELHORIAS
+- Kanban: data abreviada (dd/mm/aa) e horário nos cartões.
+- Relatórios: Oficina e Equipe; menu expansível e alternância dentro da página, útil no celular.
+- Equipe: cartões por técnico com horas previstas, trabalhadas, retrabalhos e indicador de eficiência técnica.
+- Edição: alterações de horas em OS existente exigem motivo, registrado com valores anterior e novo na linha do tempo.
+
+LIMITAÇÕES
+- Horas ainda são lançadas manualmente; taxa de utilização depende de jornada/carga horária individual e não é medida aqui.
+- WhatsApp permanece com envio manual; fotos em Supabase precisam de armazenamento seguro separado.
+- Não teste dados pessoais reais antes de verificar autenticação e políticas de acesso do Supabase.
