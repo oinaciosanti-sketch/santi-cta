@@ -57,3 +57,17 @@
 .tech-performance-card b{color:#edf1f6}
 .kanban-card-top strong{font-size:10px;white-space:nowrap}
 @media(max-width:800px){.report-section-switch button{flex:1}.tech-performance-cards{grid-template-columns:1fr}}
+/* V6: menu, usuário logado e acesso mobile */
+.reports-submenu{margin:0 10px 9px 44px!important;flex-shrink:0}
+.staff-indicator{display:flex;flex-direction:column;gap:3px;max-width:180px;text-align:right;white-space:nowrap}
+.staff-indicator strong{font-size:11px;color:#e9edf4;overflow:hidden;text-overflow:ellipsis}
+.staff-indicator small{font-size:10px;color:#a3afbd}
+.login-box .brand{justify-content:center}
+@media(max-width:800px){.staff-indicator{display:none}}
+/* V7 – gestão de pessoas */
+.staff-layout{display:grid;grid-template-columns:1fr 1.4fr;gap:18px}
+.staff-form{display:flex;flex-direction:column;gap:8px;margin-top:20px}
+.staff-request{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 0;border-bottom:1px solid #333c46}
+.staff-request strong,.staff-request small{display:block}.staff-request small{color:#97a4b3;margin-top:5px;font-size:11px}
+.staff-actions{display:flex;gap:7px;flex-wrap:wrap}
+@media(max-width:850px){.staff-layout{grid-template-columns:1fr}.staff-request{align-items:flex-start;flex-direction:column}}

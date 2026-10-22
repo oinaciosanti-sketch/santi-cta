@@ -64,6 +64,7 @@ const IconMap = {
   Veículos: CarFront,
   Relatórios: ChartColumnIncreasing,
   Configurações: Settings,
+  Funcionários: Users,
 };
 
 const NAV = [
@@ -75,6 +76,7 @@ const NAV = [
   'Veículos',
   'Relatórios',
   'Configurações',
+  'Funcionários',
 ];
 
 const VEHICLE_FILTERS = [
@@ -172,6 +174,11 @@ function App() {
   const [page, setPage] = useState('Dashboard');
   const [reportSection,setReportSection] = useState('Oficina');
   const [reportsOpen,setReportsOpen] = useState(false);
+  const [profile,setProfile] = useState(null);
+  const [profileReady,setProfileReady] = useState(!configured);
+  const [staffRequests,setStaffRequests]=useState([]);
+  const [staffDraft,setStaffDraft]=useState({full_name:'',username:'',role:'tecnico'});
+  const [selectedTech,setSelectedTech]=useState('');
   const [orders, setOrders] = useState([]);
   const [clients, setClients] = useState([]);
   const [clientSelected, setClientSelected] = useState(null);
@@ -212,6 +219,35 @@ function App() {
     return () => subscription.unsubscribe();
   }, []);
 
+  useEffect(() => {
+    if(!configured){setProfile({full_name:'Demonstração SANTI',role:'proprietario',active:true});setProfileReady(true);return;}
+    if(!session?.user?.id){setProfile(null);setProfileReady(true);return;}
+    let cancelled=false;
+    setProfileReady(false);
+    supabase.from('staff_profiles').select('full_name,role,active').eq('user_id',session.user.id).maybeSingle()
+      .then(({data,error})=>{if(!cancelled){setProfile(error?null:data);setProfileReady(true);if(error)toast('Erro ao carregar cargo: '+error.message)}})
+      .catch(e=>{if(!cancelled){setProfile(null);setProfileReady(true);toast(e.message)}});
+    return ()=>{cancelled=true};
+  },[session?.user?.id]);
+
+  const role=profile?.role||'sem_perfil';
+  const canEditOS=['proprietario','tecnico','lider','administrativo'].includes(role);
+  const canCreateOS=['proprietario','lider','administrativo'].includes(role);
+  const canManageClients=['proprietario','administrativo'].includes(role);
+  const permittedPages={
+    proprietario:NAV,
+    tecnico:['Kanban','Ordens de serviço'],
+    lider:['Dashboard','Kanban','Agenda','Ordens de serviço','Veículos','Relatórios'],
+    administrativo:['Dashboard','Kanban','Agenda','Ordens de serviço','Clientes','Veículos','Funcionários'],
+  };
+  const visibleNav=permittedPages[role]||[];
+  const roleLabel={proprietario:'Proprietário',tecnico:'Técnico',lider:'Líder de oficina',administrativo:'Administrativo'};
+  const navigate=(destination)=>{if(visibleNav.includes(destination))setPage(destination)};
+  const loadStaff=async()=>{if(!configured){setStaffRequests(JSON.parse(localStorage.getItem('santi-staff-requests-v7')||'[]'));return;}const {data,error}=await supabase.from('staff_requests').select('*').order('created_at',{ascending:false});if(!error)setStaffRequests(data||[]);};
+  useEffect(()=>{if(profile?.active&&['proprietario','administrativo'].includes(role))loadStaff();},[profile?.active,role]);
+  const submitStaff=async(e)=>{e.preventDefault();const name=staffDraft.full_name.trim(),username=staffDraft.username.trim().toLowerCase();if(!name||!/^[a-z0-9._-]{3,24}$/.test(username)){toast('Informe nome e login com 3 a 24 caracteres, sem espaços.');return;}const entry={full_name:name,username,role:staffDraft.role,status:'pendente'};try{if(configured){const {error}=await supabase.from('staff_requests').insert(entry);if(error)throw error;}else{localStorage.setItem('santi-staff-requests-v7',JSON.stringify([{...entry,id:Date.now()},...staffRequests]));}setStaffDraft({full_name:'',username:'',role:'tecnico'});await loadStaff();toast('Solicitação enviada para aprovação do proprietário.');}catch(err){toast(err.message)}};
+  const approveStaff=async(req,status)=>{if(role!=='proprietario')return;try{if(configured){const {error}=await supabase.from('staff_requests').update({status,reviewed_at:new Date().toISOString()}).eq('id',req.id);if(error)throw error;}else{localStorage.setItem('santi-staff-requests-v7',JSON.stringify(staffRequests.map(x=>x.id===req.id?{...x,status}:x)));}await loadStaff();toast(status==='aprovado'?'Cadastro aprovado. Falta criar conta Auth antes de liberar login.':'Solicitação rejeitada.');}catch(err){toast(err.message)}};
+
   const refresh = async () => {
     setBusy(true);
     try {
@@ -226,10 +262,10 @@ function App() {
   };
 
   useEffect(() => {
-    if (!authReady)return;
-    if (session) refresh();
+    if (!authReady || !profileReady)return;
+    if (session && profile?.active) refresh();
     else setBusy(false);
-  }, [session?.user?.id,authReady]);
+  }, [session?.user?.id,authReady,profileReady,profile?.active]);
 
   const persist = async (next) => {
     setOrders(next);
@@ -337,6 +373,7 @@ function App() {
   };
 
   const del = async (o) => {
+    if(role!=='proprietario'){toast('Apenas o proprietário pode excluir OS.');return;}
     if (!window.confirm(`Excluir a OS ${o.id} de ${o.customer_name}?`)) return;
     try {
       await removeOrder(o.id);
@@ -350,13 +387,13 @@ function App() {
 
   const filtered = useMemo(
     () =>
-      orders.filter((o) =>
+      orders.filter((o) => (role!=='tecnico'||o.mechanic?.trim().toLowerCase()===profile?.full_name?.trim().toLowerCase())).filter((o) =>
         [o.customer_name, o.plate, o.vehicle, o.id, o.phone, o.mechanic, o.service]
           .join(' ')
           .toLowerCase()
           .includes(query.toLowerCase()),
       ),
-    [orders, query],
+    [orders, query,role,profile?.full_name],
   );
 
   const today = orders.filter((o) => o.scheduled_date === date);
@@ -456,11 +493,13 @@ function App() {
   const signin = async (e) => {
     e.preventDefault();
     setAuthBusy(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const loginEmail=email.includes('@')?email:`${email.trim().toLowerCase()}@santicta.test`;
+    const { error } = await supabase.auth.signInWithPassword({ email:loginEmail, password });
     setAuthBusy(false);
     if (error) toast(`Não foi possível entrar: ${error.message}`);
   };
 
+  if(configured&&!authReady)return <div className="login"><div className="login-box"><Brand/><p>Verificando sessão...</p></div></div>;
   if (configured && !session) {
     return (
       <div className="login">
@@ -468,16 +507,16 @@ function App() {
           <Brand />
           <div className="login-divider" />
           <h1>Central de operações</h1>
-          <p>Acesso interno SANTI CTA. Entre com a conta criada no Supabase.</p>
+          <p>Ambiente de avaliação. Somente contas previamente autorizadas.</p>
           <form onSubmit={signin}>
             <label>
-              E-mail
+              Usuário
               <input
                 required
-                type="email"
+                type="text"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="voce@empresa.com"
+                placeholder="seu usuário"
               />
             </label>
             <label>
@@ -495,14 +534,18 @@ function App() {
               {authBusy ? 'Entrando...' : 'Entrar no sistema'}
             </button>
           </form>
-          <small>Sem perfis por cargo nesta versão. Apenas usuários autorizados no Supabase.</small>
+          <small>Para os testes: usuários internos autorizados pelo proprietário. O cargo é definido no servidor, não na tela de login.</small>
         </div>
         {notice && <div className="toast">{notice}</div>}
       </div>
     );
   }
 
-  const kanbanStages = showClosed ? STAGES : STAGES.filter((s) => s !== 'Concluído');
+  if(configured&&!profileReady)return <div className="login"><div className="login-box"><Brand/><p>Carregando seu perfil...</p></div></div>;
+  if(configured&&(!profile?.active||!profile?.role))return <div className="login"><div className="login-box"><Brand/><h2>Acesso aguardando liberação</h2><p>Sua conta ainda não possui nome, cargo e liberação no banco de dados. Solicite o cadastro ao administrador.</p><button className="btn ghost" onClick={()=>supabase.auth.signOut()}>Sair da conta</button></div></div>;
+  if(!visibleNav.includes(page))setTimeout(()=>setPage(role==='tecnico'?'Kanban':'Dashboard'),0);
+
+  const kanbanStages = (role==='tecnico'?['Recebido','Em análise','Em manutenção','Higienização','Pronto para entrega']:showClosed?STAGES:STAGES.filter((s)=>s!=='Concluído'));
 
   return (
     <div className="shell">
@@ -511,28 +554,25 @@ function App() {
         <div className="side-caption">CENTRAL OPERACIONAL</div>
 
         <nav>
-          {NAV.map((n) => {
-            const I = IconMap[n];
-            return (
-              <button
-                key={n}
-                className={`navitem ${page === n ? 'active' : ''}`}
-                onMouseEnter={() => {if(n==='Relatórios')setReportsOpen(true)}}
-                onClick={() => {
-                  setPage(n);
-                  if(n==='Relatórios'){setReportsOpen(v=>!v);setSidebar(true)}else setSidebar(false);
-                }}
-              >
-                <I size={18} />
-                {n}
-                {page === n && <ChevronRight size={14} className="navright" />}
+          {visibleNav.map((n) => {
+            const I=IconMap[n];
+            return <React.Fragment key={n}>
+              <button className={`navitem ${page===n?'active':''}`}
+                onMouseEnter={()=>{if(n==='Relatórios')setReportsOpen(true)}}
+                onClick={()=>{
+                  navigate(n);
+                  if(n==='Relatórios')setReportsOpen(v=>!v);
+                  else setSidebar(false);
+                }}>
+                <I size={18}/>{n}
+                {n==='Relatórios'?<ChevronDown size={15} className="navright"/>:(page===n&&<ChevronRight size={14} className="navright"/>)}
               </button>
-            );
+              {n==='Relatórios'&&reportsOpen&&<div className="reports-submenu">
+                <button className={page==='Relatórios'&&reportSection==='Oficina'?'chosen':''} onClick={()=>{navigate('Relatórios');setReportSection('Oficina');setSidebar(false)}}>Oficina</button>
+                <button className={page==='Relatórios'&&reportSection==='Equipe'?'chosen':''} onClick={()=>{navigate('Relatórios');setReportSection('Equipe');setSidebar(false)}}>Equipe</button>
+              </div>}
+            </React.Fragment>
           })}
-          {reportsOpen && <div className="reports-submenu">
-            <button className={page==='Relatórios'&&reportSection==='Oficina'?'chosen':''} onClick={()=>{setPage('Relatórios');setReportSection('Oficina');setSidebar(false)}}>Oficina</button>
-            <button className={page==='Relatórios'&&reportSection==='Equipe'?'chosen':''} onClick={()=>{setPage('Relatórios');setReportSection('Equipe');setSidebar(false)}}>Equipe</button>
-          </div>}
         </nav>
 
         <div className="sidebar-foot">
@@ -576,7 +616,7 @@ function App() {
             <button className="icon-btn" title="Atualizar dados" onClick={refresh}>
               <RefreshCcw size={18} />
             </button>
-            <div className="avatar">SC</div>
+            <div className="staff-indicator"><strong>{profile?.full_name||'SANTI'}</strong><small>{roleLabel[role]||'Sem cargo'}</small></div><div className="avatar">{initials(profile?.full_name||'SANTI')}</div>
             {configured && (
               <button className="icon-btn" title="Sair" onClick={() => supabase.auth.signOut()}>
                 <LogOut size={18} />
@@ -600,7 +640,7 @@ function App() {
                 {
                   {
                     Dashboard: 'Sua oficina sob controle, em qualquer lugar.',
-                    Kanban: 'Acompanhe cada veículo do agendamento à entrega.',
+                    Kanban: 'Veja seus serviços do recebimento à entrega, com diagnósticos e evidências.',
                     Agenda: 'Compromissos, chegadas e capacidade da equipe.',
                     'Ordens de serviço': 'Histórico técnico e acompanhamento de todas as OS.',
                     Clientes: 'Relacionamento e histórico dos clientes.',
@@ -621,9 +661,9 @@ function App() {
                   onChange={(e) => setDate(e.target.value)}
                 />
               )}
-              <button className="btn primary" onClick={() => setEditing(empty())}>
+              {canCreateOS&&<button className="btn primary" onClick={() => setEditing(empty())}>
                 <Plus size={17} /> Nova OS
-              </button>
+              </button>}
             </div>
           </div>
 
@@ -786,14 +826,14 @@ function App() {
                       <strong>{filtered.filter((o) => o.stage !== 'Concluído').length}</strong>{' '}
                       atendimentos abertos <span>· fluxo enxuto do agendamento à entrega</span>
                     </div>
-                    <label className="show-closed">
+                    {role!=='tecnico'&&<label className="show-closed">
                       <input
                         type="checkbox"
                         checked={showClosed}
                         onChange={(e) => setShowClosed(e.target.checked)}
                       />{' '}
                       Mostrar concluídos
-                    </label>
+                    </label>}
                   </div>
 
                   <div className="kanban-scroll">
@@ -903,7 +943,7 @@ function App() {
               {page === 'Clientes' && (
                 <div className="panel">
                   <PanelHead title="Cadastro e relacionamento" subtitle={`${customerCards.length} cliente(s) · registros independentes das ordens de serviço`}
-                    action={<button className="btn primary" onClick={() => setClientEditing({name:'',phone:'',email:'',notes:'',marketing_opt_in:false})}><UserPlus size={16}/> Novo cliente</button>} />
+                    action={canManageClients?<button className="btn primary" onClick={() => setClientEditing({name:'',phone:'',email:'',notes:'',marketing_opt_in:false})}><UserPlus size={16}/> Novo cliente</button>:null} />
                   <div className="vehicle-grid">
                     {customerCards.map(c => (
                       <button className="vehicle-card" key={c.id} onClick={()=>setClientSelected(c)}>
@@ -1002,6 +1042,26 @@ function App() {
                 </div>
               )}
 
+              {page === 'Funcionários' && ['proprietario','administrativo'].includes(role) && (
+                <div className="staff-layout">
+                  <section className="panel settings-card">
+                    <h3>Pré-cadastro de funcionário</h3>
+                    <p>O administrativo solicita; o proprietário aprova. A aprovação NÃO cria senha ou acesso automaticamente.</p>
+                    <form onSubmit={submitStaff} className="staff-form">
+                      <label className="field"><span>Nome completo</span><input required value={staffDraft.full_name} onChange={e=>setStaffDraft(v=>({...v,full_name:e.target.value}))}/></label>
+                      <label className="field"><span>Usuário desejado</span><input required placeholder="ex.: joao.silva" value={staffDraft.username} onChange={e=>setStaffDraft(v=>({...v,username:e.target.value}))}/></label>
+                      <label className="field"><span>Cargo</span><select value={staffDraft.role} onChange={e=>setStaffDraft(v=>({...v,role:e.target.value}))}><option value="tecnico">Técnico</option><option value="lider">Líder de oficina</option><option value="administrativo">Administrativo</option></select></label>
+                      <button type="submit" className="btn primary"><Plus size={16}/> Enviar para aprovação</button>
+                    </form>
+                  </section>
+                  <section className="panel settings-card">
+                    <h3>Solicitações e avaliação</h3>
+                    <p>Somente o proprietário pode aprovar. Contas reais devem ser provisionadas com segurança no Supabase.</p>
+                    {staffRequests.map(r=><div className="staff-request" key={r.id}><div><strong>{r.full_name}</strong><small>@{r.username} · {roleLabel[r.role]} · {r.status}</small></div>{role==='proprietario'&&r.status==='pendente'&&<div className="staff-actions"><button className="btn ghost" onClick={()=>approveStaff(r,'aprovado')}>Aprovar</button><button className="btn dangerous" onClick={()=>approveStaff(r,'rejeitado')}>Recusar</button></div>}</div>)}
+                    {!staffRequests.length&&<p>Nenhum pré-cadastro registrado.</p>}
+                  </section>
+                </div>
+              )}
               {page === 'Configurações' && (
                 <div className="settings-grid">
                   <div className="panel settings-card">
@@ -1039,14 +1099,14 @@ function App() {
         </main>
       </div>
 
-      {editing && <EditModal order={editing} onClose={() => setEditing(null)} onSave={save} />}
+      {editing && canEditOS && <EditModal order={editing} onClose={() => setEditing(null)} onSave={save} />}
       {selected && !editing && (
         <Detail
           order={selected}
           all={orders}
           onClose={() => setSelected(null)}
           onPatch={patch}
-          onEdit={() => setEditing(selected)}
+          onEdit={() => canEditOS&&setEditing(selected)}
           onDelete={() => del(selected)}
           tab={detailTab}
           setTab={setDetailTab}
@@ -1054,8 +1114,8 @@ function App() {
         />
       )}
       {clientSelected && !clientEditing && <CustomerDetail c={customerCards.find(c=>c.id===clientSelected.id)||clientSelected}
-        onClose={()=>setClientSelected(null)} onEdit={()=>setClientEditing(clientSelected)} openOS={o=>{setClientSelected(null);setSelected(o)}}/>}
-      {clientEditing && <CustomerEdit value={clientEditing} onClose={()=>setClientEditing(null)} onSave={saveClient}/>}
+        onClose={()=>setClientSelected(null)} onEdit={()=>canManageClients&&setClientEditing(clientSelected)} openOS={o=>{setClientSelected(null);setSelected(o)}}/>}
+      {clientEditing && canManageClients && <CustomerEdit value={clientEditing} onClose={()=>setClientEditing(null)} onSave={saveClient}/>}
       {notice && <div className="toast">{notice}</div>}
     </div>
   );

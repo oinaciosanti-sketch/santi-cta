@@ -1,0 +1,24 @@
+SANTI CTA V7 — TESTES COM INÁCIO E ALCIDES
+
+1. Envie os arquivos do ZIP ao GitHub, substituindo os atuais; faça commit na main.
+2. No Supabase, aplique as migrações anteriores ainda faltantes (V3, V4, V6), na ordem.
+3. Execute o novo arquivo supabase/migration_v7_piloto.sql NO SQL Editor.
+4. Authentication > Users > Add user: crie duas contas (somente piloto), por exemplo
+   inacio@santicta.test e alcides@santicta.test, com senhas fortes diferentes.
+   Informe senhas diretamente ao Supabase, NUNCA ao ChatGPT ou ao GitHub.
+   No caso de endereços .test, crie os usuários via opção administrativa de usuário
+   já confirmado; não dependa de links de confirmação por e-mail.
+5. No SQL Editor, copie e execute os dois INSERTs de staff_profiles ao fim da migração,
+   sem os -- iniciais. Ajuste os e-mails se você usou endereços diferentes.
+6. Na Vercel, mantenha as variáveis VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY.
+7. Login: digite apenas inacio ou alcides (ou e-mail completo) e a senha cadastrada.
+
+IMPORTANTE:
+- A V7 é um piloto: o banco SOMENTE autoriza perfis de proprietário com pilot_access=true.
+- Inácio e Alcides ficam temporariamente com perfil proprietário para revisão geral.
+- Os outros cargos são uma PREPARAÇÃO DE INTERFACE e NÃO devem ser ativados ainda.
+- Cadastrar/aprovar funcionário no site cria pré-cadastro, NÃO cria conta Auth.
+- Para liberar técnicos no futuro, será necessária migração segura de RLS/RPCs que
+  limite leitura à OS atribuída e escrita apenas a dados técnicos.
+- O técnico terá Kanban e ordens pessoais quando essa etapa de segurança for concluída.
+- Não cadastre dados reais de clientes até conferir políticas e fluxos do piloto.

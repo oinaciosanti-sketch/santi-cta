@@ -1,0 +1,32 @@
+SANTI CTA V6 — LOGIN E CARGOS
+
+1. Substitua os arquivos do repositório GitHub pelos arquivos desta pasta e confirme na branch main.
+2. Supabase > SQL Editor: execute supabase/migration_v6_acessos.sql APÓS as migrações V3 e V4.
+3. Em Supabase > Authentication > Users, crie os usuários com e-mail e senha.
+4. COPIE o UUID de um usuário do painel Authentication.
+5. Execute no SQL Editor, substituindo os valores:
+
+insert into public.staff_profiles(user_id,full_name,role)
+values ('UUID-DO-USUARIO','Nome Completo','proprietario')
+on conflict(user_id) do update set full_name=excluded.full_name,role=excluded.role,active=true;
+
+6. Repita para cada funcionário com cargo consultor, tecnico, lider ou administrativo.
+7. Confira o deploy na Vercel.
+
+ATENÇÃO: a migração DESATIVA as permissões amplas anteriores. Se você executá-la
+antes de cadastrar seu próprio perfil, o site abrirá em 'Acesso aguardando liberação'.
+É possível cadastrar o perfil pelo SQL Editor a qualquer momento.
+
+NESTA VERSÃO:
+- Nome e cargo aparecem na barra superior.
+- O menu Relatórios > Oficina / Equipe aparece abaixo de Relatórios (não Configurações).
+- A visibilidade dos menus muda conforme o cargo.
+- Políticas RLS impedem usuários sem perfil de consultar tabelas e limitam acesso a clientes.
+- Acesso por cargo existe, MAS a permissão para EDITAR CAMPOS ESPECÍFICOS de uma OS
+  AINDA NÃO É SEGURA: técnicos e administrativo têm UPDATE à linha inteira.
+  Antes de uso com funcionários reais, criar funções RPC para operações autorizadas
+  (mudar etapa, horas, custos, pagamentos) e revogar UPDATE direto.
+- Dados de demonstração são fictícios e continuam no navegador.
+- Não colocar SERVICE_ROLE nem SECRET KEY no frontend.
+
+Não exclua nem recrie as tabelas existentes.
