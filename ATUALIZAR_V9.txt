@@ -1,0 +1,19 @@
+SANTI CTA V9 — GESTÃO INTEGRADA
+
+1. Faça backup/exportação antes de atualizar.
+2. Extraia o ZIP e envie o CONTEÚDO da pasta santi-cta para a raiz do repositório GitHub.
+3. Confirme que o deploy na Vercel está Ready. Preserve as duas variáveis VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY.
+4. No Supabase, SQL Editor, execute APENAS o conteúdo de supabase/migration_v9_staff_directory.sql.
+   Não execute novamente schema.sql e nem as migrações anteriores.
+   Se a política staff_profiles_pilot_owner_list já existir, ignore a execução repetida.
+5. Saia e entre no SANTI CTA. Teste Relatórios (expansão apenas por clique), Clientes,
+   Veículos (ficha e OS pré-preenchida) e Funcionários (Equipe, Solicitações e Novo funcionário).
+
+LIMITAÇÕES IMPORTANTES
+- Veículos são derivados das OS, não há tabela independente de veículos nesta versão.
+- Criar novas contas Auth, bloquear login e promover cargos não ocorre diretamente no navegador:
+  só por procedimento administrativo seguro no Supabase. Isso é intencional.
+- Pedidos de cadastro/aprovação não concedem acesso automaticamente.
+- O piloto mantém acesso real aos dados restrito aos perfis de proprietário autorizados.
+- Mensagens WhatsApp permanecem manuais; armazenamento privado de fotos segue pendente.
+- Não use dados sensíveis de clientes reais até a revisão de permissões e segurança.

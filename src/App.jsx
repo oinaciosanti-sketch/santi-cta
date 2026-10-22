@@ -177,6 +177,9 @@ function App() {
   const [profile,setProfile] = useState(null);
   const [profileReady,setProfileReady] = useState(!configured);
   const [staffRequests,setStaffRequests]=useState([]);
+  const [staffProfiles,setStaffProfiles]=useState([]);
+  const [staffView,setStaffView]=useState('equipe');
+  const [vehicleSelected,setVehicleSelected]=useState(null);
   const [staffDraft,setStaffDraft]=useState({full_name:'',username:'',role:'tecnico'});
   const [publicAccessRequests,setPublicAccessRequests]=useState([]);
   const [selectedTech,setSelectedTech]=useState('');
@@ -258,8 +261,9 @@ function App() {
     const {error}=await supabase.from('access_requests').update({status,reviewed_at:new Date().toISOString()}).eq('id',req.id);
     if(error)toast(error.message);else{await loadPublicAccess();toast(status==='aprovado'?'Pedido aprovado. Crie o usuário em Authentication e atribua seu perfil no Supabase.':'Pedido recusado.');}
   };
+  const loadStaffProfiles=async()=>{if(!configured)return;const {data,error}=await supabase.from('staff_profiles').select('user_id,full_name,role,active,pilot_access').order('full_name');if(!error)setStaffProfiles(data||[]);};
   const loadStaff=async()=>{if(!configured){setStaffRequests(JSON.parse(localStorage.getItem('santi-staff-requests-v7')||'[]'));return;}const {data,error}=await supabase.from('staff_requests').select('*').order('created_at',{ascending:false});if(!error)setStaffRequests(data||[]);};
-  useEffect(()=>{if(profile?.active&&['proprietario','administrativo'].includes(role))loadStaff();if(role==='proprietario')loadPublicAccess();},[profile?.active,role]);
+  useEffect(()=>{if(profile?.active&&['proprietario','administrativo'].includes(role)){loadStaff();loadStaffProfiles();}if(role==='proprietario')loadPublicAccess();},[profile?.active,role]);
   const submitStaff=async(e)=>{e.preventDefault();const name=staffDraft.full_name.trim(),username=staffDraft.username.trim().toLowerCase();if(!name||!/^[a-z0-9._-]{3,24}$/.test(username)){toast('Informe nome e login com 3 a 24 caracteres, sem espaços.');return;}const entry={full_name:name,username,role:staffDraft.role,status:'pendente'};try{if(configured){const {error}=await supabase.from('staff_requests').insert(entry);if(error)throw error;}else{localStorage.setItem('santi-staff-requests-v7',JSON.stringify([{...entry,id:Date.now()},...staffRequests]));}setStaffDraft({full_name:'',username:'',role:'tecnico'});await loadStaff();toast('Solicitação enviada para aprovação do proprietário.');}catch(err){toast(err.message)}};
   const approveStaff=async(req,status)=>{if(role!=='proprietario')return;try{if(configured){const {error}=await supabase.from('staff_requests').update({status,reviewed_at:new Date().toISOString()}).eq('id',req.id);if(error)throw error;}else{localStorage.setItem('santi-staff-requests-v7',JSON.stringify(staffRequests.map(x=>x.id===req.id?{...x,status}:x)));}await loadStaff();toast(status==='aprovado'?'Cadastro aprovado. Falta criar conta Auth antes de liberar login.':'Solicitação rejeitada.');}catch(err){toast(err.message)}};
 
@@ -612,14 +616,13 @@ function App() {
             const I=IconMap[n];
             return <React.Fragment key={n}>
               <button className={`navitem ${page===n?'active':''}`}
-                onMouseEnter={()=>{if(n==='Relatórios')setReportsOpen(true)}}
                 onClick={()=>{
                   navigate(n);
                   if(n==='Relatórios')setReportsOpen(v=>!v);
                   else setSidebar(false);
                 }}>
                 <I size={18}/>{n}
-                {n==='Relatórios'?<ChevronDown size={15} className="navright"/>:(page===n&&<ChevronRight size={14} className="navright"/>)}
+                {n==='Relatórios'?<ChevronDown size={15} className="navright"/>:null}
               </button>
               {n==='Relatórios'&&reportsOpen&&<div className="reports-submenu">
                 <button className={page==='Relatórios'&&reportSection==='Oficina'?'chosen':''} onClick={()=>{navigate('Relatórios');setReportSection('Oficina');setSidebar(false)}}>Oficina</button>
@@ -715,7 +718,7 @@ function App() {
                   onChange={(e) => setDate(e.target.value)}
                 />
               )}
-              {canCreateOS&&<button className="btn primary" onClick={() => setEditing(empty())}>
+              {canCreateOS&&['Dashboard','Agenda','Kanban','Ordens de serviço'].includes(page)&&<button className="btn primary" onClick={() => setEditing(empty())}>
                 <Plus size={17} /> Nova OS
               </button>}
             </div>
@@ -1016,7 +1019,7 @@ function App() {
                 <div className="panel">
                   <PanelHead
                     title="Passaporte digital dos veículos"
-                    subtitle="Filtro rápido da operação e da programação"
+                    subtitle="Histórico por placa · consulte um veículo ou abra uma OS já preenchida"
                     action={
                       <div className="filter-pills">
                         <Filter size={15} />
@@ -1034,7 +1037,7 @@ function App() {
                   />
                   <div className="vehicle-grid">
                     {vehicleCards.map((v) => (
-                      <button className="vehicle-card" key={v.plate} onClick={() => setSelected(v.latest)}>
+                      <button className="vehicle-card" key={v.plate} onClick={() => setVehicleSelected(v)}>
                         <div className="vehicle-symbol">
                           <CarFront size={27} />
                         </div>
@@ -1097,8 +1100,12 @@ function App() {
               )}
 
               {page === 'Funcionários' && ['proprietario','administrativo'].includes(role) && (
-                <div className="staff-layout">
-                  <section className="panel settings-card">
+                <div className="staff-page">
+                  <div className="staff-intro"><div><h2>Central de pessoas</h2><p>Cadastro, permissões e decisões de carreira — com aprovação e rastreabilidade.</p></div><div className="staff-actions"><button className={`pill ${staffView==='equipe'?'active':''}`} onClick={()=>setStaffView('equipe')}>Equipe</button><button className={`pill ${staffView==='solicitacoes'?'active':''}`} onClick={()=>setStaffView('solicitacoes')}>Solicitações</button><button className={`pill ${staffView==='novo'?'active':''}`} onClick={()=>setStaffView('novo')}>+ Novo funcionário</button></div></div>
+                  <div className="staff-kpis"><div><small>Usuários com perfil</small><strong>{staffProfiles.length}</strong></div><div><small>Ativos</small><strong>{staffProfiles.filter(x=>x.active).length}</strong></div><div><small>Solicitações pendentes</small><strong>{staffRequests.filter(x=>x.status==='pendente').length+publicAccessRequests.filter(x=>x.status==='pendente').length}</strong></div><div><small>Contas sem acesso</small><strong>{staffProfiles.filter(x=>!x.active).length}</strong></div></div>
+                  {staffView==='equipe'&&<section className="panel staff-directory"><PanelHead title="Equipe cadastrada" subtitle="Acesso piloto: alterações de cargos e bloqueios exigem operação administrativa segura no Supabase" action={<button className="btn ghost" onClick={loadStaffProfiles}><RefreshCcw size={15}/> Atualizar</button>}/><div className="staff-members">{staffProfiles.map(p=><div className="staff-member" key={p.user_id}><div className="avatar">{initials(p.full_name)}</div><div><strong>{p.full_name}</strong><small>{roleLabel[p.role]||p.role} · {p.pilot_access?'Piloto autorizado':'Sem liberação de piloto'}</small></div><span className={`staff-state ${p.active?'ok':'off'}`}>{p.active?'Ativo':'Inativo'}</span></div>)}{!staffProfiles.length&&<p className="hint">Sem perfis exibíveis ou sem permissão para listar. Confira a política de leitura de perfis no Supabase.</p>}</div></section>}
+                  {staffView!=='equipe'&&<div className="staff-layout">
+                  {staffView==='novo'&&<section className="panel settings-card">
                     <h3>Pré-cadastro de funcionário</h3>
                     <p>O administrativo solicita; o proprietário aprova. A aprovação NÃO cria senha ou acesso automaticamente.</p>
                     <form onSubmit={submitStaff} className="staff-form">
@@ -1107,14 +1114,15 @@ function App() {
                       <label className="field"><span>Cargo</span><select value={staffDraft.role} onChange={e=>setStaffDraft(v=>({...v,role:e.target.value}))}><option value="tecnico">Técnico</option><option value="lider">Líder de oficina</option><option value="administrativo">Administrativo</option></select></label>
                       <button type="submit" className="btn primary"><Plus size={16}/> Enviar para aprovação</button>
                     </form>
-                  </section>
-                  <section className="panel settings-card">
+                  </section>}
+                  {staffView==='solicitacoes'&&<section className="panel settings-card">
                     {role==='proprietario'&&<div className="access-request-section"><h3>Solicitações pela tela de login</h3><p>Por segurança, aprovar não cria automaticamente a conta. Crie o usuário no Supabase e associe o perfil após conferir a identidade.</p>{publicAccessRequests.map(r=><div className="staff-request" key={r.id}><div><strong>{r.full_name}</strong><small>@{r.username} · {r.contact_email} · {roleLabel[r.desired_role]} · {r.status}</small>{r.reason&&<small>{r.reason}</small>}</div>{r.status==='pendente'&&<div className="staff-actions"><button className="btn ghost" onClick={()=>reviewPublicAccess(r,'aprovado')}>Aprovar</button><button className="btn dangerous" onClick={()=>reviewPublicAccess(r,'rejeitado')}>Recusar</button></div>}</div>)}{!publicAccessRequests.length&&<p>Não há solicitações externas.</p>}</div>}
                     <h3>Solicitações e avaliação</h3>
                     <p>Somente o proprietário pode aprovar. Contas reais devem ser provisionadas com segurança no Supabase.</p>
                     {staffRequests.map(r=><div className="staff-request" key={r.id}><div><strong>{r.full_name}</strong><small>@{r.username} · {roleLabel[r.role]} · {r.status}</small></div>{role==='proprietario'&&r.status==='pendente'&&<div className="staff-actions"><button className="btn ghost" onClick={()=>approveStaff(r,'aprovado')}>Aprovar</button><button className="btn dangerous" onClick={()=>approveStaff(r,'rejeitado')}>Recusar</button></div>}</div>)}
                     {!staffRequests.length&&<p>Nenhum pré-cadastro registrado.</p>}
-                  </section>
+                  </section>}
+                  </div>}
                 </div>
               )}
               {page === 'Configurações' && (
@@ -1139,8 +1147,9 @@ function App() {
                   <div className="panel settings-card">
                     <h3>Observação da versão</h3>
                     <p>
-                      Versão focada em recepção, agenda, fluxo de oficina, passaporte de veículos e
-                      WhatsApp. Sem áreas de acesso por cargo por enquanto.
+                      Versão piloto de gestão integrada com navegação por cargo, clientes,
+                      passaporte técnico e central de funcionários. Liberações efetivas de contas
+                      e mudanças de cargo permanecem restritas ao administrador do Supabase.
                     </p>
                     <div className="setting-note">
                       <AlertCircle size={16} /> Próximo passo sugerido: perfis por cargo, anexos em
@@ -1168,6 +1177,7 @@ function App() {
           onNotice={toast}
         />
       )}
+      {vehicleSelected && <VehicleDetail vehicle={vehicleSelected} allOrders={orders} onClose={()=>setVehicleSelected(null)} onNewOS={()=>{setEditing({...empty(),plate:vehicleSelected.plate,vehicle:vehicleSelected.vehicle,customer_name:vehicleSelected.customer_name,phone:vehicleSelected.latest.phone});setVehicleSelected(null)}} openOS={o=>{setVehicleSelected(null);setSelected(o)}}/>}
       {clientSelected && !clientEditing && <CustomerDetail c={customerCards.find(c=>c.id===clientSelected.id)||clientSelected}
         onClose={()=>setClientSelected(null)} onEdit={()=>canManageClients&&setClientEditing(clientSelected)} openOS={o=>{setClientSelected(null);setSelected(o)}}/>}
       {clientEditing && canManageClients && <CustomerEdit value={clientEditing} onClose={()=>setClientEditing(null)} onSave={saveClient}/>}
@@ -1177,6 +1187,12 @@ function App() {
 }
 
 function Metric({label,value,helper}) { return <div className="report-metric"><span>{label}</span><strong>{value}</strong><small>{helper}</small></div> }
+
+
+function VehicleDetail({vehicle,allOrders,onClose,onNewOS,openOS}){
+ const visits=allOrders.filter(o=>o.plate===vehicle.plate).sort((a,b)=>(b.scheduled_date||'').localeCompare(a.scheduled_date||''));
+ return <div className="overlay" onMouseDown={e=>e.target===e.currentTarget&&onClose()}><div className="modal detail-modal"><div className="modal-head"><div><span className="eyebrow">PASSAPORTE DIGITAL / {vehicle.plate}</span><h2>{vehicle.vehicle}</h2><p>{vehicle.customer_name} · {visits.length} atendimento(s)</p></div><button className="icon-btn" aria-label="Fechar" onClick={onClose}><X/></button></div><div className="detail-content"><div className="vehicle-overview"><div><small>Placa</small><strong>{vehicle.plate}</strong></div><div><small>Último status</small><strong>{vehicle.latest.stage}</strong></div><div><small>Última data</small><strong>{friendlyDate(vehicle.latest.scheduled_date)}</strong></div></div><h3>Histórico técnico do veículo</h3>{visits.map(o=><button key={o.id} className="vehicle-visit" onClick={()=>openOS(o)}><div><strong>{o.id} · {o.service}</strong><small>{friendlyDate(o.scheduled_date)} · {o.mechanic||'Sem técnico'}</small><small>{o.diagnosis||'Diagnóstico ainda não registrado'}</small></div><Badge stage={o.stage}/><ChevronRight size={16}/></button>)}<p className="hint">Cadastro de veículo independente da OS será uma etapa adicional. Aqui, o passaporte usa os dados técnicos já registrados nas ordens de serviço.</p></div><div className="modal-actions"><button className="btn ghost" onClick={onClose}>Fechar</button><button className="btn primary" onClick={onNewOS}><Plus size={16}/> Nova OS deste veículo</button></div></div></div>;
+}
 
 function CustomerEdit({value,onClose,onSave}) {
   const [c,setC]=useState(value);
