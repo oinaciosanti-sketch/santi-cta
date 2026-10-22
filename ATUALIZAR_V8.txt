@@ -1,0 +1,11 @@
+SANTI CTA — V8: solicitar acesso e manter conectado
+
+1. Atualize o repositório GitHub com o conteúdo da pasta santi-cta.
+2. Supabase SQL Editor: execute somente supabase/migration_v8_access_requests.sql.
+3. Faça deploy Vercel; use as variáveis Supabase já configuradas.
+4. Teste Solictar acesso SEM estar autenticado. Pedidos aparecem em Funcionários para o proprietário.
+5. A aprovação da solicitação NÃO cria conta. Proprietário deve conferir a pessoa, criar usuário em Supabase Auth e cadastrar staff_profiles.
+6. 'Manter conectado': marcado usa localStorage; desmarcado usa sessionStorage (dura a sessão da aba/navegador). Se já havia sessão persistente de outra versão, saia e faça login novamente para aplicar a opção.
+7. 'Entrar com código por e-mail' é alternativa sem senha, não MFA real. Necessita email verdadeiro e acessível; os usuários @santicta.test NÃO recebem mensagens.
+8. Antes de abrir a inscrição publicamente, adicione proteção anti-spam/CAPTCHA e limites de requisição num backend/Edge Function. Use dados de teste por enquanto.
+9. A criação de acesso de proprietário NUNCA é liberada via formulário público.
