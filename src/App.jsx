@@ -178,6 +178,7 @@ function App() {
   const [profileReady,setProfileReady] = useState(!configured);
   const [staffRequests,setStaffRequests]=useState([]);
   const [staffDraft,setStaffDraft]=useState({full_name:'',username:'',role:'tecnico'});
+  const [publicAccessRequests,setPublicAccessRequests]=useState([]);
   const [selectedTech,setSelectedTech]=useState('');
   const [orders, setOrders] = useState([]);
   const [clients, setClients] = useState([]);
@@ -198,6 +199,10 @@ function App() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [authBusy, setAuthBusy] = useState(false);
+  const [rememberMe,setRememberMe]=useState(localStorage.getItem('santi-remember-session')==='true');
+  const [accessView,setAccessView]=useState('login');
+  const [accessDraft,setAccessDraft]=useState({full_name:'',username:'',email:'',role:'tecnico',reason:''});
+  const [accessBusy,setAccessBusy]=useState(false);
   const [detailTab, setDetailTab] = useState('Resumo');
   const [showClosed, setShowClosed] = useState(false);
   const [vehicleFilter, setVehicleFilter] = useState('em-oficina');
@@ -243,8 +248,18 @@ function App() {
   const visibleNav=permittedPages[role]||[];
   const roleLabel={proprietario:'Proprietário',tecnico:'Técnico',lider:'Líder de oficina',administrativo:'Administrativo'};
   const navigate=(destination)=>{if(visibleNav.includes(destination))setPage(destination)};
+  const loadPublicAccess=async()=>{
+    if(!configured)return;
+    const {data,error}=await supabase.from('access_requests').select('*').order('created_at',{ascending:false});
+    if(!error)setPublicAccessRequests(data||[]);
+  };
+  const reviewPublicAccess=async(req,status)=>{
+    if(role!=='proprietario')return;
+    const {error}=await supabase.from('access_requests').update({status,reviewed_at:new Date().toISOString()}).eq('id',req.id);
+    if(error)toast(error.message);else{await loadPublicAccess();toast(status==='aprovado'?'Pedido aprovado. Crie o usuário em Authentication e atribua seu perfil no Supabase.':'Pedido recusado.');}
+  };
   const loadStaff=async()=>{if(!configured){setStaffRequests(JSON.parse(localStorage.getItem('santi-staff-requests-v7')||'[]'));return;}const {data,error}=await supabase.from('staff_requests').select('*').order('created_at',{ascending:false});if(!error)setStaffRequests(data||[]);};
-  useEffect(()=>{if(profile?.active&&['proprietario','administrativo'].includes(role))loadStaff();},[profile?.active,role]);
+  useEffect(()=>{if(profile?.active&&['proprietario','administrativo'].includes(role))loadStaff();if(role==='proprietario')loadPublicAccess();},[profile?.active,role]);
   const submitStaff=async(e)=>{e.preventDefault();const name=staffDraft.full_name.trim(),username=staffDraft.username.trim().toLowerCase();if(!name||!/^[a-z0-9._-]{3,24}$/.test(username)){toast('Informe nome e login com 3 a 24 caracteres, sem espaços.');return;}const entry={full_name:name,username,role:staffDraft.role,status:'pendente'};try{if(configured){const {error}=await supabase.from('staff_requests').insert(entry);if(error)throw error;}else{localStorage.setItem('santi-staff-requests-v7',JSON.stringify([{...entry,id:Date.now()},...staffRequests]));}setStaffDraft({full_name:'',username:'',role:'tecnico'});await loadStaff();toast('Solicitação enviada para aprovação do proprietário.');}catch(err){toast(err.message)}};
   const approveStaff=async(req,status)=>{if(role!=='proprietario')return;try{if(configured){const {error}=await supabase.from('staff_requests').update({status,reviewed_at:new Date().toISOString()}).eq('id',req.id);if(error)throw error;}else{localStorage.setItem('santi-staff-requests-v7',JSON.stringify(staffRequests.map(x=>x.id===req.id?{...x,status}:x)));}await loadStaff();toast(status==='aprovado'?'Cadastro aprovado. Falta criar conta Auth antes de liberar login.':'Solicitação rejeitada.');}catch(err){toast(err.message)}};
 
@@ -494,51 +509,90 @@ function App() {
     e.preventDefault();
     setAuthBusy(true);
     const loginEmail=email.includes('@')?email:`${email.trim().toLowerCase()}@santicta.test`;
+    localStorage.setItem('santi-remember-session',String(rememberMe));
     const { error } = await supabase.auth.signInWithPassword({ email:loginEmail, password });
     setAuthBusy(false);
     if (error) toast(`Não foi possível entrar: ${error.message}`);
   };
 
+  const submitAccess=async(e)=>{
+    e.preventDefault();
+    const username=accessDraft.username.trim().toLowerCase();
+    const emailAddress=accessDraft.email.trim().toLowerCase();
+    if(!/^[a-z0-9._-]{3,30}$/.test(username)){toast('Usuário precisa ter 3–30 caracteres, sem espaços.');return;}
+    setAccessBusy(true);
+    try{
+      const {error}=await supabase.from('access_requests').insert({
+        full_name:accessDraft.full_name.trim().slice(0,120),
+        username,
+        contact_email:emailAddress.slice(0,160),
+        desired_role:accessDraft.role,
+        reason:accessDraft.reason.trim().slice(0,400)
+      });
+      if(error)throw error;
+      setAccessView('submitted');
+    }catch(err){toast('Não foi possível enviar a solicitação: '+err.message)}
+    finally{setAccessBusy(false)}
+  };
+  const sendAccessCode=async()=>{
+    const loginEmail=email.includes('@')?email.trim().toLowerCase():`${email.trim().toLowerCase()}@santicta.test`;
+    if(!email.trim()){toast('Informe seu usuário antes de solicitar o código.');return;}
+    setAuthBusy(true);
+    try{
+      const {error}=await supabase.auth.signInWithOtp({email:loginEmail,options:{shouldCreateUser:false}});
+      if(error)throw error;
+      toast('Se a conta tiver e-mail acessível e autorizado, o código será enviado.');
+      setAccessView('otp');
+    }catch(err){toast('Não foi possível solicitar código: '+err.message)}
+    finally{setAuthBusy(false)}
+  };
+  const [otpCode,setOtpCode]=useState('');
+  const verifyAccessCode=async(e)=>{
+    e.preventDefault();
+    const loginEmail=email.includes('@')?email.trim().toLowerCase():`${email.trim().toLowerCase()}@santicta.test`;
+    localStorage.setItem('santi-remember-session',String(rememberMe));
+    setAuthBusy(true);
+    const {error}=await supabase.auth.verifyOtp({email:loginEmail,token:otpCode.trim(),type:'email'});
+    setAuthBusy(false);
+    if(error)toast('Código inválido ou expirado: '+error.message);
+  };
+  // Nunca abrir o painel automaticamente quando a configuração de produção estiver ausente.
+  // A demonstração permanece disponível apenas se solicitada explicitamente com ?demo=1.
+  if (!configured && !new URLSearchParams(window.location.search).has('demo')) {
+    return <div className="login"><div className="login-box setup-box"><Brand/><div className="login-divider"/>
+      <h1>Configuração de acesso pendente</h1>
+      <p>O SANTI CTA não encontrou a conexão com o Supabase nesta publicação. Por segurança, não abrimos o painel com dados fictícios automaticamente.</p>
+      <div className="setup-steps"><strong>Na Vercel → SANTI CTA → Settings → Environment Variables:</strong>
+        <code>VITE_SUPABASE_URL</code><code>VITE_SUPABASE_ANON_KEY</code>
+        <span>Preencha com os valores públicos do projeto Supabase e faça um novo deploy. Nunca use a chave secreta/service_role.</span>
+      </div>
+      <a className="btn ghost stretch" href="?demo=1">Abrir demonstração separada</a>
+    </div></div>;
+  }
   if(configured&&!authReady)return <div className="login"><div className="login-box"><Brand/><p>Verificando sessão...</p></div></div>;
   if (configured && !session) {
-    return (
-      <div className="login">
-        <div className="login-box">
-          <Brand />
-          <div className="login-divider" />
-          <h1>Central de operações</h1>
-          <p>Ambiente de avaliação. Somente contas previamente autorizadas.</p>
-          <form onSubmit={signin}>
-            <label>
-              Usuário
-              <input
-                required
-                type="text"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="seu usuário"
-              />
-            </label>
-            <label>
-              Senha
-              <input
-                required
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Sua senha"
-              />
-            </label>
-            <button disabled={authBusy} className="btn primary" type="submit">
-              <LockKeyhole size={17} />
-              {authBusy ? 'Entrando...' : 'Entrar no sistema'}
-            </button>
-          </form>
-          <small>Para os testes: usuários internos autorizados pelo proprietário. O cargo é definido no servidor, não na tela de login.</small>
-        </div>
-        {notice && <div className="toast">{notice}</div>}
-      </div>
-    );
+    return <div className="login"><div className="login-box"><Brand/><div className="login-divider"/>
+      {accessView==='login'&&<><h1>Central de operações</h1><p>Acesso exclusivo à equipe autorizada SANTI CTA.</p>
+        <form onSubmit={signin}>
+          <label>Usuário<input autoComplete="username" required value={email} onChange={e=>setEmail(e.target.value)} placeholder="seu usuário"/></label>
+          <label>Senha<input autoComplete="current-password" type="password" required value={password} onChange={e=>setPassword(e.target.value)} placeholder="Sua senha"/></label>
+          <label className="remember-row"><input type="checkbox" checked={rememberMe} onChange={e=>setRememberMe(e.target.checked)}/><span>Manter conectado neste dispositivo</span></label>
+          <button type="submit" disabled={authBusy} className="btn primary"><LockKeyhole size={17}/>{authBusy?'Entrando...':'Entrar no sistema'}</button>
+        </form>
+        <div className="login-secondary-actions"><button type="button" onClick={()=>setAccessView('request')}>Solicitar acesso</button><button type="button" onClick={sendAccessCode}>Entrar com código por e-mail</button></div>
+        <small>Apenas usuários aprovados podem acessar os dados. Não compartilhe sua senha.</small></>}
+      {accessView==='request'&&<><h1>Solicitar acesso</h1><p>Preencha seus dados. O proprietário avaliará seu pedido; nenhuma conta é criada automaticamente.</p>
+        <form onSubmit={submitAccess}>
+          <label>Nome completo<input required maxLength={120} value={accessDraft.full_name} onChange={e=>setAccessDraft(v=>({...v,full_name:e.target.value}))}/></label>
+          <label>Usuário desejado<input required maxLength={30} value={accessDraft.username} onChange={e=>setAccessDraft(v=>({...v,username:e.target.value}))} placeholder="ex.: joao.silva"/></label>
+          <label>E-mail de contato<input required type="email" maxLength={160} value={accessDraft.email} onChange={e=>setAccessDraft(v=>({...v,email:e.target.value}))}/></label>
+          <label>Cargo desejado<select value={accessDraft.role} onChange={e=>setAccessDraft(v=>({...v,role:e.target.value}))}><option value="tecnico">Técnico</option><option value="lider">Líder de oficina</option><option value="administrativo">Administrativo</option></select></label>
+          <label>Observação (opcional)<textarea rows={2} maxLength={400} value={accessDraft.reason} onChange={e=>setAccessDraft(v=>({...v,reason:e.target.value}))}/></label>
+          <button className="btn primary" disabled={accessBusy}>{accessBusy?'Enviando...':'Enviar para aprovação'}</button>
+        </form><button className="login-back" onClick={()=>setAccessView('login')}>Voltar ao login</button></>}
+      {accessView==='submitted'&&<><h1>Solicitação enviada</h1><p>Seu pedido entrou na fila de avaliação. O proprietário precisa aprovar e criar uma conta de acesso antes de você entrar.</p><button className="btn primary" onClick={()=>setAccessView('login')}>Voltar ao login</button></>}
+      {accessView==='otp'&&<><h1>Verificação por e-mail</h1><p>Digite o código enviado para o e-mail cadastrado. Esta é uma alternativa ao login por senha, não uma segunda etapa obrigatória.</p><form onSubmit={verifyAccessCode}><label>Código de acesso<input required inputMode="numeric" value={otpCode} onChange={e=>setOtpCode(e.target.value)} placeholder="Código recebido"/></label><label className="remember-row"><input type="checkbox" checked={rememberMe} onChange={e=>setRememberMe(e.target.checked)}/>Manter conectado neste dispositivo</label><button className="btn primary" disabled={authBusy}>Validar código</button></form><button className="login-back" onClick={()=>setAccessView('login')}>Voltar ao login</button></>}
+      </div>{notice&&<div className="toast">{notice}</div>}</div>;
   }
 
   if(configured&&!profileReady)return <div className="login"><div className="login-box"><Brand/><p>Carregando seu perfil...</p></div></div>;
@@ -1055,6 +1109,7 @@ function App() {
                     </form>
                   </section>
                   <section className="panel settings-card">
+                    {role==='proprietario'&&<div className="access-request-section"><h3>Solicitações pela tela de login</h3><p>Por segurança, aprovar não cria automaticamente a conta. Crie o usuário no Supabase e associe o perfil após conferir a identidade.</p>{publicAccessRequests.map(r=><div className="staff-request" key={r.id}><div><strong>{r.full_name}</strong><small>@{r.username} · {r.contact_email} · {roleLabel[r.desired_role]} · {r.status}</small>{r.reason&&<small>{r.reason}</small>}</div>{r.status==='pendente'&&<div className="staff-actions"><button className="btn ghost" onClick={()=>reviewPublicAccess(r,'aprovado')}>Aprovar</button><button className="btn dangerous" onClick={()=>reviewPublicAccess(r,'rejeitado')}>Recusar</button></div>}</div>)}{!publicAccessRequests.length&&<p>Não há solicitações externas.</p>}</div>}
                     <h3>Solicitações e avaliação</h3>
                     <p>Somente o proprietário pode aprovar. Contas reais devem ser provisionadas com segurança no Supabase.</p>
                     {staffRequests.map(r=><div className="staff-request" key={r.id}><div><strong>{r.full_name}</strong><small>@{r.username} · {roleLabel[r.role]} · {r.status}</small></div>{role==='proprietario'&&r.status==='pendente'&&<div className="staff-actions"><button className="btn ghost" onClick={()=>approveStaff(r,'aprovado')}>Aprovar</button><button className="btn dangerous" onClick={()=>approveStaff(r,'rejeitado')}>Recusar</button></div>}</div>)}

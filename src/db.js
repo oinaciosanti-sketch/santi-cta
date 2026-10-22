@@ -2,7 +2,14 @@ import {createClient} from '@supabase/supabase-js';
 import {seed} from './data';
 const url=import.meta.env.VITE_SUPABASE_URL,key=import.meta.env.VITE_SUPABASE_ANON_KEY;
 export const configured=Boolean(url&&key&&!url.includes('SEU-PROJETO'));
-export const supabase=configured?createClient(url,key):null;
+// Auth: sessão somente na aba por padrão; persistência local opcional.
+// A escolha ocorre antes do signIn e é usada pela sessão do Supabase.
+const sessionStorageAdapter={
+  getItem(k){return (localStorage.getItem('santi-remember-session')==='true'?localStorage:sessionStorage).getItem(k)},
+  setItem(k,v){const persistent=localStorage.getItem('santi-remember-session')==='true';const destination=persistent?localStorage:sessionStorage;destination.setItem(k,v);(persistent?sessionStorage:localStorage).removeItem(k)},
+  removeItem(k){localStorage.removeItem(k);sessionStorage.removeItem(k)}
+};
+export const supabase=configured?createClient(url,key,{auth:{storage:sessionStorageAdapter,persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}}):null;
 const DEMO_KEY='santi-cta-demo-v1';
 const CUSTOMERS_KEY='santi-cta-customers-v3';
 const clone=v=>JSON.parse(JSON.stringify(v));

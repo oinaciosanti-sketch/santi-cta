@@ -1,0 +1,15 @@
+SANTI CTA — Correção V8.1 (menu lateral e login)
+
+1. Extraia este ZIP e envie os arquivos do projeto para seu repositório GitHub na branch main.
+2. Vercel > projeto santi-cta > Settings > Environment Variables.
+3. Configure para Production e Preview:
+   VITE_SUPABASE_URL = URL pública do projeto Supabase
+   VITE_SUPABASE_ANON_KEY = chave anon/publishable pública do Supabase
+   NUNCA use service_role ou secret.
+4. Faça novo deploy em Vercel > Deployments (redeploy).
+5. Se ainda não houver configuração de Supabase, o site exibirá uma tela de configuração, não o painel diretamente.
+6. Com as variáveis corretas, o sistema exibirá login; se já houver sessão válida salva (Manter conectado), abrir direto é o comportamento esperado. Para testar o login, clique em Sair e abra novamente em aba anônima.
+7. Para visualizar SOMENTE uma demonstração local intencionalmente, abra a URL com ?demo=1 caso o Supabase não esteja configurado.
+8. Menu lateral: agora permite rolar para ver Configurações e os demais itens, também no celular.
+
+NÃO precisa executar SQL adicional: esta atualização altera apenas a interface.
