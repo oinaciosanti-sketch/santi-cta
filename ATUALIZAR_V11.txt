@@ -1,0 +1,44 @@
+SANTI CTA V11 + SANTI DRIVE
+==========================
+
+1) BACKUP
+   Supabase > Database > Backups. Faça backup antes de migrations.
+
+2) GITHUB
+   Envie o conteúdo da pasta santi-cta para a raiz do seu repositório.
+   Atenção: package.json deve ficar na raiz, não dentro de uma pasta extra.
+   Faça commit na branch main.
+
+3) SUPABASE
+   SQL Editor > New query > abra supabase/migration_v11_drive.sql
+   no seu computador, copie todo seu conteúdo, cole e clique em Run.
+   Execute APENAS a migration V11 (desde que V10 esteja aplicada).
+   NÃO execute schema.sql novamente.
+
+4) VERCEL
+   Confira VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY em Settings > Environment Variables.
+   Ambas são variáveis públicas (Config), NUNCA chave secret/service_role.
+   Faça novo deploy da main.
+   Sistema interno: https://SEU-PROJETO.vercel.app/
+   Agendamento público: https://SEU-PROJETO.vercel.app/agendar
+
+5) TESTE
+   Agende com um nome/placa fictícios pela rota /agendar.
+   Verifique a OS WEB-* em Agenda / Kanban do painel privado.
+   Teste duas reservas no mesmo horário: limite de 3, contado pelo banco.
+   Teste reagendamento e cancelamento pelo link Pit Pass recebido.
+
+6) WHATSAPP
+   A confirmação pode ser COMPARTILHADA pelo próprio cliente (manual).
+   Lembretes AUTOMÁTICOS: configure a Edge Function drive-reminders conforme
+   GUIA_WHATSAPP_V11.md. Dependem da API oficial Meta e agendamento externo.
+   NÃO marque a integração como ativa antes de testar os modelos aprovados.
+
+IMPORTANTE
+- Esta versão é piloto, não produção aberta à internet. A função de reservas
+  tem validação e trava transacional, mas ainda precisa CAPTCHA/rate limiting.
+- A página cliente não dá acesso ao banco interno; somente a funções RPC públicas.
+- O QR Code é um LINK PRIVADO: não publique o QR de um cliente nas redes sociais.
+- Clientes novos precisam de contato verificado antes de reconhecimento automático;
+  por isso, esta V11 não apresenta históricos privados pelo telefone digitado.
+- O horário é para avaliação inicial, não conclusão de reparo.

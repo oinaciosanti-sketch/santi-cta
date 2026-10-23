@@ -100,6 +100,7 @@ const empty = () => ({
   scheduled_date: nowLocal(),
   scheduled_time: '09:00',
   mechanic: '',
+  mechanic_user_id: null,
   price: 0,
   paid: false,
   notes: '',
@@ -263,7 +264,7 @@ function App() {
   };
   const loadStaffProfiles=async()=>{if(!configured)return;const {data,error}=await supabase.from('staff_profiles').select('user_id,full_name,role,active,pilot_access').order('full_name');if(!error)setStaffProfiles(data||[]);};
   const loadStaff=async()=>{if(!configured){setStaffRequests(JSON.parse(localStorage.getItem('santi-staff-requests-v7')||'[]'));return;}const {data,error}=await supabase.from('staff_requests').select('*').order('created_at',{ascending:false});if(!error)setStaffRequests(data||[]);};
-  useEffect(()=>{if(profile?.active&&['proprietario','administrativo'].includes(role)){loadStaff();loadStaffProfiles();}if(role==='proprietario')loadPublicAccess();},[profile?.active,role]);
+  useEffect(()=>{if(profile?.active&&['proprietario','administrativo','lider'].includes(role)){loadStaff();loadStaffProfiles();}if(role==='proprietario')loadPublicAccess();},[profile?.active,role]);
   const submitStaff=async(e)=>{e.preventDefault();const name=staffDraft.full_name.trim(),username=staffDraft.username.trim().toLowerCase();if(!name||!/^[a-z0-9._-]{3,24}$/.test(username)){toast('Informe nome e login com 3 a 24 caracteres, sem espaços.');return;}const entry={full_name:name,username,role:staffDraft.role,status:'pendente'};try{if(configured){const {error}=await supabase.from('staff_requests').insert(entry);if(error)throw error;}else{localStorage.setItem('santi-staff-requests-v7',JSON.stringify([{...entry,id:Date.now()},...staffRequests]));}setStaffDraft({full_name:'',username:'',role:'tecnico'});await loadStaff();toast('Solicitação enviada para aprovação do proprietário.');}catch(err){toast(err.message)}};
   const approveStaff=async(req,status)=>{if(role!=='proprietario')return;try{if(configured){const {error}=await supabase.from('staff_requests').update({status,reviewed_at:new Date().toISOString()}).eq('id',req.id);if(error)throw error;}else{localStorage.setItem('santi-staff-requests-v7',JSON.stringify(staffRequests.map(x=>x.id===req.id?{...x,status}:x)));}await loadStaff();toast(status==='aprovado'?'Cadastro aprovado. Falta criar conta Auth antes de liberar login.':'Solicitação rejeitada.');}catch(err){toast(err.message)}};
 
@@ -319,8 +320,11 @@ function App() {
 
   const save = async (data) => {
     const existing = orders.find((x) => x.id === data.id);
+    const assigned = staffProfiles.find((t) => t.user_id === data.mechanic_user_id && t.role === 'tecnico' && t.active);
+    if (data.mechanic_user_id && !assigned) { toast('Selecione um técnico ativo da equipe.'); return; }
     const payload = {
       ...data,
+      mechanic: assigned?.full_name || (data.mechanic_user_id ? '' : (existing?.mechanic_user_id ? '' : data.mechanic || '')),
       plate: data.plate.toUpperCase().replace(/[^A-Z0-9]/g, ''),
       price: Number(data.price) || 0,
       estimated_hours: data.estimated_hours === '' || data.estimated_hours == null ? null : Number(data.estimated_hours),
@@ -406,13 +410,13 @@ function App() {
 
   const filtered = useMemo(
     () =>
-      orders.filter((o) => (role!=='tecnico'||o.mechanic?.trim().toLowerCase()===profile?.full_name?.trim().toLowerCase())).filter((o) =>
+      orders.filter((o) => (role!=='tecnico'||o.mechanic_user_id===session?.user?.id)).filter((o) =>
         [o.customer_name, o.plate, o.vehicle, o.id, o.phone, o.mechanic, o.service]
           .join(' ')
           .toLowerCase()
           .includes(query.toLowerCase()),
       ),
-    [orders, query,role,profile?.full_name],
+    [orders, query,role,session?.user?.id],
   );
 
   const today = orders.filter((o) => o.scheduled_date === date);
@@ -666,7 +670,7 @@ function App() {
             )}
           </div>
 
-          <div className="top-actions">
+          <div className="top-actions"><a className="drive-admin-link" href="/agendar" target="_blank" rel="noreferrer">SANTI DRIVE ↗</a>
             <span className={`mode ${!configured ? 'demo' : 'online'}`}>
               {!configured ? 'MODO DEMONSTRAÇÃO' : 'SUPABASE CONECTADO'}
             </span>
@@ -1163,7 +1167,7 @@ function App() {
         </main>
       </div>
 
-      {editing && canEditOS && <EditModal order={editing} onClose={() => setEditing(null)} onSave={save} />}
+      {editing && canEditOS && <EditModal order={editing} staff={staffProfiles} orders={orders} onClose={() => setEditing(null)} onSave={save} />}
       {selected && !editing && (
         <Detail
           order={selected}
@@ -1296,9 +1300,11 @@ function OrderTable({ list, open }) {
   );
 }
 
-function EditModal({ order, onClose, onSave }) {
+function EditModal({ order, staff = [], orders = [], onClose, onSave }) {
   const [f, setF] = useState(order);
   const [saving, setSaving] = useState(false);
+  const technicians = staff.filter(x => x.role === 'tecnico' && x.active);
+  const techLoads = Object.fromEntries(technicians.map(t => [t.user_id, orders.filter(o => o.mechanic_user_id === t.user_id && o.stage !== 'Concluído').length]));
 
   const update = (k, v) => setF((x) => ({ ...x, [k]: v }));
 
@@ -1358,7 +1364,15 @@ function EditModal({ order, onClose, onSave }) {
                 <input value={f.year || ''} onChange={(e) => update('year', e.target.value)} />
               </Field>
               <Field label="Técnico responsável">
-                <input value={f.mechanic || ''} onChange={(e) => update('mechanic', e.target.value)} />
+                <select value={f.mechanic_user_id || ''} onChange={(e) => {
+                  const chosen = technicians.find(t => t.user_id === e.target.value);
+                  setF(prev => ({...prev, mechanic_user_id: chosen?.user_id || null, mechanic: chosen?.full_name || ''}));
+                }}>
+                  <option value="">Aguardando distribuição / sem técnico</option>
+                  {technicians.map(t => <option key={t.user_id} value={t.user_id}>{t.full_name} — {techLoads[t.user_id] || 0} OS aberta(s)</option>)}
+                </select>
+                {!technicians.length && <small className="tech-assignment-note">Nenhum técnico ativo disponível. Cadastre e ative um funcionário do tipo Técnico.</small>}
+                {!f.mechanic_user_id && f.mechanic && <small className="tech-assignment-note">Atribuição anterior por texto: {f.mechanic}. Selecione um técnico cadastrado para vinculá-la com segurança.</small>}
               </Field>
             </div>
 

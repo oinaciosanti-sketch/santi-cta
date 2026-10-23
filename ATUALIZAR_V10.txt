@@ -1,0 +1,14 @@
+SANTI CTA V10 — Atribuição segura de técnico
+
+1. Atualize arquivos do GitHub com este ZIP.
+2. Supabase SQL Editor: execute APENAS supabase/migration_v10_technician_assignment.sql.
+3. Confirme técnico ativo em Authentication > Users e staff_profiles (role = tecnico, active = true).
+4. Reabra a OS. No campo Técnico responsável, selecione um nome da lista; salve.
+5. Se a OS já tinha um nome digitado, selecione o profissional correto manualmente (não vinculamos automaticamente por coincidência de nomes).
+6. A coluna mechanic_user_id guardará a identificação única do técnico; as listas mostram carga em OS abertas.
+
+PILOTO E SEGURANÇA:
+- Esta versão não amplia permissões de leitura para técnicos; V7 mantém ordens só para proprietários.
+- Para colocar tablets e técnicos reais, ainda precisamos implantar consultas restritas por ID no banco e mutações seguras por ação/campo. A simples filtragem visual não protege dados.
+- Fotos e envio automático por WhatsApp não estão ativos nesta entrega.
+- Faça backup antes de migração e teste só com dados fictícios.

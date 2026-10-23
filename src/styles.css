@@ -107,3 +107,6 @@
 .vehicle-overview{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:25px}.vehicle-overview>div{background:#202733;border-radius:8px;padding:14px}.vehicle-overview small,.vehicle-overview strong{display:block}.vehicle-overview small{color:#92a0b1;margin-bottom:7px;font-size:10px}.vehicle-overview strong{font-size:13px}
 .vehicle-visit{width:100%;display:flex;align-items:center;gap:14px;text-align:left;color:#eef2f7;background:#1e2530;border:1px solid #374350;padding:15px;border-radius:8px;margin:8px 0}.vehicle-visit>div{flex:1}.vehicle-visit strong,.vehicle-visit small{display:block}.vehicle-visit small{margin-top:6px;color:#91a0b1;font-size:10px}
 @media(max-width:750px){.staff-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.vehicle-overview{grid-template-columns:1fr}.vehicle-visit{flex-wrap:wrap}.staff-intro{padding:15px}}
+.tech-assignment-note{display:block;font-size:11px;color:#daa478;line-height:1.5;margin-top:6px}
+
+.drive-admin-link{display:inline-flex;align-items:center;color:#f1b3b4;border:1px solid #76363b;background:#2c191e;padding:9px 12px;border-radius:8px;font-weight:800;white-space:nowrap;font-size:11px}.drive-admin-link:hover{color:white;background:#4a242a}@media(max-width:900px){.drive-admin-link{font-size:0;padding:8px}.drive-admin-link:after{content:"↗";font-size:17px}}
