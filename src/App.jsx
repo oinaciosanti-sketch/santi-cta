@@ -31,6 +31,7 @@ import {
   LockKeyhole,
   Filter,
   UserPlus,
+  UserCheck,
   CreditCard,
   BarChart3,
 } from 'lucide-react';
@@ -44,6 +45,7 @@ import {
   waLink,
 } from './data';
 import {testAppointments} from './fixtures';
+import Reception from './Reception.jsx';
 import {
   configured,
   supabase,
@@ -59,6 +61,7 @@ const IconMap = {
   Dashboard: LayoutDashboard,
   Kanban: Columns3,
   Agenda: CalendarDays,
+  Recepção: UserCheck,
   'Ordens de serviço': ClipboardList,
   Clientes: Users,
   Veículos: CarFront,
@@ -71,6 +74,7 @@ const NAV = [
   'Dashboard',
   'Kanban',
   'Agenda',
+  'Recepção',
   'Ordens de serviço',
   'Clientes',
   'Veículos',
@@ -246,8 +250,8 @@ function App() {
   const permittedPages={
     proprietario:NAV,
     tecnico:['Kanban','Ordens de serviço'],
-    lider:['Dashboard','Kanban','Agenda','Ordens de serviço','Veículos','Relatórios'],
-    administrativo:['Dashboard','Kanban','Agenda','Ordens de serviço','Clientes','Veículos','Funcionários'],
+    lider:['Dashboard','Kanban','Agenda','Recepção','Ordens de serviço','Veículos','Relatórios'],
+    administrativo:['Dashboard','Kanban','Agenda','Recepção','Ordens de serviço','Clientes','Veículos','Funcionários'],
   };
   const visibleNav=permittedPages[role]||[];
   const roleLabel={proprietario:'Proprietário',tecnico:'Técnico',lider:'Líder de oficina',administrativo:'Administrativo'};
@@ -703,6 +707,7 @@ function App() {
                     Dashboard: 'Sua oficina sob controle, em qualquer lugar.',
                     Kanban: 'Veja seus serviços do recebimento à entrega, com diagnósticos e evidências.',
                     Agenda: 'Compromissos, chegadas e capacidade da equipe.',
+                    Recepção: 'Confirmação, lembretes e check-in dos clientes agendados.',
                     'Ordens de serviço': 'Histórico técnico e acompanhamento de todas as OS.',
                     Clientes: 'Relacionamento e histórico dos clientes.',
                     Veículos: 'Programação e passaporte digital dos veículos.',
@@ -960,6 +965,8 @@ function App() {
                   </div>
                 </>
               )}
+
+              {page === 'Recepção' && <Reception orders={orders} staffProfiles={staffProfiles} onRefresh={refresh} onOpen={setSelected} onNotify={toast} canOperate={['proprietario','administrativo','lider'].includes(role)}/>}
 
               {page === 'Agenda' && (
                 <div className="panel">
